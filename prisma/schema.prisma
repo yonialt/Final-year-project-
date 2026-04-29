@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STAFF
+  DEPARTMENT_HEAD
+  ACADEMIC_DEAN
+  RESOURCE_OFFICER
+  TECHNICIAN
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(STAFF)
+  department    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  requests      Request[]
+  maintenances  Maintenance[] @relation("TechnicianMaintenances")
+
+  @@map("users")
+}
+
+// ─── Resource Management ────────────────────────────────────────────────────
+
+enum ResourceStatus {
+  AVAILABLE
+  IN_USE
+  DAMAGED
+  DISPOSED
+}
+
+model Resource {
+  id            String         @id @default(cuid())
+  name          String
+  type          String
+  location      String
+  purchaseDate  DateTime
+  purchasePrice Float
+  status        ResourceStatus @default(AVAILABLE)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  requests      Request[]
+  maintenances  Maintenance[]
+
+  @@map("resources")
+}
+
+// ─── Request System ─────────────────────────────────────────────────────────
+
+enum RequestStatus {
+  PENDING
+  APPROVED_BY_HEAD
+  APPROVED_BY_DEAN
+  APPROVED_BY_OFFICER
+  REJECTED
+  IN_MAINTENANCE
+  COMPLETED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Request {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  resourceId    String?
+  resource      Resource?     @relation(fields: [resourceId], references: [id])
+  description   String
+  status        RequestStatus @default(PENDING)
+  priority      Priority      @default(MEDIUM)
+  type          String        // 'NEW_RESOURCE' or 'DAMAGE_REPORT'
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  maintenance   Maintenance?
+
+  @@map("requests")
+}
+
+// ─── Maintenance & AI Decisions ─────────────────────────────────────────────
+
+model Maintenance {
+  id           String    @id @default(cuid())
+  requestId    String    @unique
+  request      Request   @relation(fields: [requestId], references: [id])
+  resourceId   String
+  resource     Resource  @relation(fields: [resourceId], references: [id])
+  technicianId String
+  technician   User      @relation("TechnicianMaintenances", fields: [technicianId], references: [id])
+  
+  damageLevel  Int?      // 1-3
+  repairCost   Float?
+  newPrice     Float?
+  age          Int?      // Calculated age in years
+  notes        String?
+  
+  aiDecision   String?   // 'REPAIR' or 'REPLACE'
+  aiConfidence Float?
+  finalDecision String?  // Decision made by Resource Officer
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("maintenance")
+}
+
+// ─── External Pricing API Mock ──────────────────────────────────────────────
+
+model PriceCatalog {
+  id           String   @id @default(cuid())
+  resourceType String   @unique
+  repairCost   Float
+  newPrice     Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("price_catalog")
+}
+
