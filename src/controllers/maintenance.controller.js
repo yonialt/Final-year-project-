@@ -15,27 +15,35 @@ const getMaintenanceById = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-const startMaintenance = async (req, res, next) => {
+const assignTechnician = async (req, res, next) => {
   try {
-    const { requestId, technicianId } = req.body;
-    const maintenance = await maintenanceService.startMaintenance(requestId, technicianId || req.user.id);
+    const { damageReportId, technicianId } = req.body;
+    const maintenance = await maintenanceService.assignTechnician(damageReportId, technicianId);
     res.status(201).json({ data: maintenance });
   } catch (err) { next(err); }
 };
 
-const inputData = async (req, res, next) => {
+const submitInspection = async (req, res, next) => {
   try {
-    const maintenance = await maintenanceService.inputMaintenanceData(req.params.id, req.body);
+    const maintenance = await maintenanceService.submitInspection(req.params.id, req.body);
     res.json({ data: maintenance });
   } catch (err) { next(err); }
 };
 
 const finalize = async (req, res, next) => {
   try {
-    const { finalDecision } = req.body;
-    const maintenance = await maintenanceService.finalizeDecision(req.params.id, finalDecision);
+    const { finalDecision, officerNotes } = req.body;
+    const maintenance = await maintenanceService.finalizeDecision(req.params.id, finalDecision, officerNotes);
     res.json({ data: maintenance });
   } catch (err) { next(err); }
 };
 
-module.exports = { getAllMaintenance, getMaintenanceById, startMaintenance, inputData, finalize };
+const completeRepair = async (req, res, next) => {
+  try {
+    const { repairNotes } = req.body;
+    const maintenance = await maintenanceService.completeRepair(req.params.id, repairNotes);
+    res.json({ data: maintenance });
+  } catch (err) { next(err); }
+};
+
+module.exports = { getAllMaintenance, getMaintenanceById, assignTechnician, submitInspection, finalize, completeRepair };

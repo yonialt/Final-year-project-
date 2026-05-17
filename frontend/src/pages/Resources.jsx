@@ -61,81 +61,85 @@ export default function Resources() {
       && (filterStatus==='ALL'||r.status===filterStatus);
   });
 
-  const Badge = ({status}) => { const s=STATUS_STYLE[status]||STATUS_STYLE.AVAILABLE; return <span style={{padding:'0.25rem 0.75rem',borderRadius:20,fontSize:'0.7rem',fontWeight:700,color:s.color,background:s.bg,border:`1px solid ${s.color}20`}}>{status}</span>; };
+  const Badge = ({status}) => {
+    const s=STATUS_STYLE[status]||STATUS_STYLE.AVAILABLE;
+    return <span className="badge" style={{color:s.color,background:s.bg,border:`1px solid ${s.color}25`}}>{status}</span>;
+  };
 
   return (
     <div className="animate-in">
-      <header style={{marginBottom:'2.5rem',display:'flex',justifyContent:'space-between',alignItems:'flex-end'}}>
+      <header className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="gradient-text">Asset Inventory</h1>
-          <p className="text-muted">Comprehensive tracking of all university physical resources.</p>
+          <h1 className="gradient-text text-3xl font-extrabold tracking-tight">Asset Inventory</h1>
+          <p className="mt-1 text-sm" style={{color:'var(--text-muted)'}}>Comprehensive tracking of all university physical resources.</p>
         </div>
-        <div style={{display:'flex',gap:'0.75rem'}}>
-          <button className="btn-premium" style={{background:'var(--bg-glass)',border:'1px solid var(--border-glass)',boxShadow:'none'}} onClick={fetchResources}>
-            <RefreshCw size={16}/><span style={{color:'var(--text-main)'}}>Refresh</span>
-          </button>
-          {canManage && <button className="btn-premium" onClick={openAdd}><Plus size={18}/><span>New Asset</span></button>}
+        <div className="flex gap-2">
+          <button className="btn-ghost" onClick={fetchResources}><RefreshCw size={15}/> Refresh</button>
+          {canManage && <button className="btn-primary" onClick={openAdd}><Plus size={16}/> New Asset</button>}
         </div>
       </header>
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'1rem',marginBottom:'2rem'}}>
+      {/* Stat cards */}
+      <div className="grid grid-cols-4 gap-3 mb-6">
         {[{k:'ALL',label:'Total Assets'},{k:'AVAILABLE',label:'Available'},{k:'DAMAGED',label:'Damaged'},{k:'DISPOSED',label:'Disposed'}].map(({k,label}) => {
           const count = k==='ALL'?resources.length:resources.filter(r=>r.status===k).length;
           const c = k==='ALL'?'var(--accent-blue)':(STATUS_STYLE[k]?.color||'var(--text-dim)');
           return (
-            <div key={k} className="glass-card" onClick={()=>setFilterStatus(k)} style={{cursor:'pointer',padding:'1.25rem',border:filterStatus===k?`1px solid ${c}`:''}}>
-              <p style={{fontSize:'0.7rem',fontWeight:700,color:c,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'0.5rem'}}>{label}</p>
-              <h2 style={{fontSize:'2rem',fontWeight:900}}>{count}</h2>
+            <div key={k} className="glass-card cursor-pointer" onClick={()=>setFilterStatus(k)}
+                 style={{padding:'1rem', border:filterStatus===k?`1px solid ${c}`:''}}>
+              <p className="text-[0.65rem] font-bold uppercase tracking-wider mb-1" style={{color:c}}>{label}</p>
+              <h2 className="text-2xl font-black">{count}</h2>
             </div>
           );
         })}
       </div>
 
-      <div className="glass-card" style={{padding:0,overflow:'hidden'}}>
-        <div style={{padding:'1.5rem',borderBottom:'1px solid var(--border-glass)',display:'flex',gap:'1rem'}}>
-          <div style={{position:'relative',flexGrow:1}}>
-            <Search size={18} style={{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',color:'var(--text-dim)'}}/>
-            <input type="text" className="input-glass" placeholder="Search by name, type or location..." style={{paddingLeft:44}} value={search} onChange={e=>setSearch(e.target.value)}/>
+      {/* Table */}
+      <div className="glass-card overflow-hidden" style={{padding:0}}>
+        <div className="flex gap-3 p-4" style={{borderBottom:'1px solid var(--border-glass)'}}>
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{color:'var(--text-dim)'}}/>
+            <input className="input-glass pl-10" placeholder="Search by name, type or location..." value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
-          <select className="input-glass" style={{width:160}} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
+          <select className="input-glass w-40" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
             {['ALL','AVAILABLE','IN_USE','DAMAGED','DISPOSED'].map(s=><option key={s} value={s}>{s==='ALL'?'All Statuses':s}</option>)}
           </select>
         </div>
 
-        <div style={{overflowX:'auto'}}>
-          <table style={{width:'100%',borderCollapse:'collapse'}}>
+        <div className="overflow-x-auto">
+          <table className="w-full" style={{borderCollapse:'collapse'}}>
             <thead>
-              <tr style={{textAlign:'left',borderBottom:'1px solid var(--border-glass)'}}>
+              <tr style={{borderBottom:'1px solid var(--border-glass)'}}>
                 {['Asset Identity','Type','Location','Purchased','Value','Status',canManage?'Actions':''].map(h=>(
-                  <th key={h} style={{padding:'1rem 1.5rem',fontSize:'0.75rem',fontWeight:700,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-[0.7rem] font-bold uppercase tracking-wider whitespace-nowrap" style={{color:'var(--text-dim)'}}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="7" style={{textAlign:'center',padding:'4rem'}}><div className="pulse text-accent">Loading assets...</div></td></tr>
+                <tr><td colSpan="7" className="text-center py-12"><div className="pulse" style={{color:'var(--accent-blue)'}}>Loading assets...</div></td></tr>
               ) : filtered.length===0 ? (
-                <tr><td colSpan="7" style={{textAlign:'center',padding:'4rem',color:'var(--text-dim)'}}>
-                  <Package size={40} style={{margin:'0 auto 1rem',opacity:0.3,display:'block'}}/>No assets match your criteria.
+                <tr><td colSpan="7" className="text-center py-12" style={{color:'var(--text-dim)'}}>
+                  <Package size={36} className="mx-auto mb-3" style={{opacity:0.2}}/>No assets match your criteria.
                 </td></tr>
               ) : filtered.map(r=>(
-                <tr key={r.id} style={{borderBottom:'1px solid rgba(255,255,255,0.03)'}}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <td style={{padding:'1.25rem 1.5rem'}}>
-                    <div style={{fontWeight:700,fontSize:'0.95rem'}}>{r.name}</div>
-                    <div style={{fontSize:'0.7rem',color:'var(--text-dim)',fontFamily:'monospace'}}>#{r.id.substring(0,10)}</div>
+                <tr key={r.id} className="table-row-hover" style={{borderBottom:'1px solid rgba(255,255,255,0.03)'}}>
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-sm">{r.name}</div>
+                    <div className="text-[0.65rem] font-mono" style={{color:'var(--text-dim)'}}>#{r.id.substring(0,10)}</div>
                   </td>
-                  <td style={{padding:'1.25rem 1.5rem'}}><div style={{display:'flex',alignItems:'center',gap:6,fontSize:'0.875rem'}}><Layers size={14} className="text-accent"/>{r.type}</div></td>
-                  <td style={{padding:'1.25rem 1.5rem'}}><div style={{display:'flex',alignItems:'center',gap:6,fontSize:'0.875rem'}}><MapPin size={14} style={{color:'var(--text-dim)'}}/>{r.location}</div></td>
-                  <td style={{padding:'1.25rem 1.5rem'}}><div style={{display:'flex',alignItems:'center',gap:6,fontSize:'0.875rem'}}><Calendar size={14} style={{color:'var(--text-dim)'}}/>{new Date(r.purchaseDate).toLocaleDateString()}</div></td>
-                  <td style={{padding:'1.25rem 1.5rem'}}><div style={{display:'flex',alignItems:'center',gap:4,fontSize:'0.875rem',fontWeight:700}}><DollarSign size={14} style={{color:'var(--accent-emerald)'}}/>{Number(r.purchasePrice).toLocaleString()}</div></td>
-                  <td style={{padding:'1.25rem 1.5rem'}}><Badge status={r.status}/></td>
-                  <td style={{padding:'1.25rem 1.5rem',textAlign:'right'}}>
-                    {canManage&&<div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
-                      <button onClick={()=>openEdit(r)} style={{background:'rgba(56,189,248,0.08)',border:'1px solid rgba(56,189,248,0.15)',borderRadius:8,padding:'0.4rem 0.7rem',color:'var(--accent-blue)',cursor:'pointer'}}><Edit3 size={15}/></button>
-                      <button onClick={()=>handleDelete(r.id)} style={{background:'rgba(251,113,133,0.08)',border:'1px solid rgba(251,113,133,0.15)',borderRadius:8,padding:'0.4rem 0.7rem',color:'var(--accent-rose)',cursor:'pointer'}}><Trash2 size={15}/></button>
-                    </div>}
+                  <td className="px-4 py-3"><div className="flex items-center gap-1.5 text-sm"><Layers size={13} style={{color:'var(--accent-blue)'}}/>{r.type}</div></td>
+                  <td className="px-4 py-3"><div className="flex items-center gap-1.5 text-sm"><MapPin size={13} style={{color:'var(--text-dim)'}}/>{r.location}</div></td>
+                  <td className="px-4 py-3"><div className="flex items-center gap-1.5 text-sm"><Calendar size={13} style={{color:'var(--text-dim)'}}/>{new Date(r.purchaseDate).toLocaleDateString()}</div></td>
+                  <td className="px-4 py-3"><div className="flex items-center gap-1 text-sm font-bold"><DollarSign size={13} style={{color:'var(--accent-emerald)'}}/>{Number(r.purchasePrice).toLocaleString()}</div></td>
+                  <td className="px-4 py-3"><Badge status={r.status}/></td>
+                  <td className="px-4 py-3 text-right">
+                    {canManage && (
+                      <div className="flex gap-1.5 justify-end">
+                        <button onClick={()=>openEdit(r)} className="p-1.5 rounded-lg cursor-pointer" style={{background:'rgba(56,189,248,0.08)',border:'1px solid rgba(56,189,248,0.15)',color:'var(--accent-blue)'}}><Edit3 size={14}/></button>
+                        <button onClick={()=>handleDelete(r.id)} className="p-1.5 rounded-lg cursor-pointer" style={{background:'rgba(251,113,133,0.08)',border:'1px solid rgba(251,113,133,0.15)',color:'var(--accent-rose)'}}><Trash2 size={14}/></button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -144,44 +148,45 @@ export default function Resources() {
         </div>
       </div>
 
-      {modal&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(2,6,23,0.88)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:'1rem'}}>
-          <div className="glass-card animate-in" style={{width:'100%',maxWidth:520,padding:'2.5rem',borderTop:'4px solid var(--accent-blue)'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'2rem'}}>
-              <h2 style={{fontSize:'1.5rem',fontWeight:800,margin:0}}>{modal==='add'?'Register New Asset':'Edit Asset'}</h2>
-              <button onClick={closeModal} style={{background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer'}}><X size={22}/></button>
+      {/* Modal */}
+      {modal && (
+        <div className="modal-overlay">
+          <div className="glass-card modal-card animate-in" style={{maxWidth:520}}>
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-xl font-extrabold">{modal==='add'?'Register New Asset':'Edit Asset'}</h2>
+              <button onClick={closeModal} style={{background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer'}}><X size={20}/></button>
             </div>
-            {error&&<div style={{background:'rgba(251,113,133,0.1)',border:'1px solid rgba(251,113,133,0.3)',borderRadius:10,padding:'0.75rem 1rem',color:'var(--accent-rose)',fontSize:'0.875rem',marginBottom:'1.5rem'}}>{error}</div>}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem'}}>
+            {error && <div className="p-3 rounded-xl mb-4 text-sm" style={{background:'rgba(251,113,133,0.1)',border:'1px solid rgba(251,113,133,0.2)',color:'var(--accent-rose)'}}>{error}</div>}
+            <div className="grid grid-cols-2 gap-3">
               {[['Asset Name','name'],['Category / Type','type']].map(([l,k])=>(
                 <div key={k}>
-                  <label style={{fontSize:'0.7rem',fontWeight:700,color:'var(--text-dim)',textTransform:'uppercase',display:'block',marginBottom:'0.5rem'}}>{l}</label>
+                  <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>{l}</label>
                   <input className="input-glass" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={l}/>
                 </div>
               ))}
-              <div style={{gridColumn:'1/-1'}}>
-                <label style={{fontSize:'0.7rem',fontWeight:700,color:'var(--text-dim)',textTransform:'uppercase',display:'block',marginBottom:'0.5rem'}}>Location</label>
+              <div className="col-span-2">
+                <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Location</label>
                 <input className="input-glass" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))} placeholder="Building / Room"/>
               </div>
               <div>
-                <label style={{fontSize:'0.7rem',fontWeight:700,color:'var(--text-dim)',textTransform:'uppercase',display:'block',marginBottom:'0.5rem'}}>Purchase Date</label>
+                <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Purchase Date</label>
                 <input type="date" className="input-glass" value={form.purchaseDate} onChange={e=>setForm(f=>({...f,purchaseDate:e.target.value}))}/>
               </div>
               <div>
-                <label style={{fontSize:'0.7rem',fontWeight:700,color:'var(--text-dim)',textTransform:'uppercase',display:'block',marginBottom:'0.5rem'}}>Price ($)</label>
+                <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Price ($)</label>
                 <input type="number" min="0" className="input-glass" value={form.purchasePrice} onChange={e=>setForm(f=>({...f,purchasePrice:e.target.value}))} placeholder="0.00"/>
               </div>
-              <div style={{gridColumn:'1/-1'}}>
-                <label style={{fontSize:'0.7rem',fontWeight:700,color:'var(--text-dim)',textTransform:'uppercase',display:'block',marginBottom:'0.5rem'}}>Status</label>
+              <div className="col-span-2">
+                <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Status</label>
                 <select className="input-glass" value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
                   {['AVAILABLE','IN_USE','DAMAGED','DISPOSED'].map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
             </div>
-            <div style={{display:'flex',gap:'1rem',marginTop:'2rem'}}>
-              <button onClick={closeModal} style={{flex:1,background:'var(--bg-glass)',border:'1px solid var(--border-glass)',borderRadius:12,padding:'0.875rem',color:'var(--text-muted)',cursor:'pointer',fontWeight:600}}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="btn-premium" style={{flex:2,justifyContent:'center',padding:'0.875rem'}}>
-                {saving?<RefreshCw size={18} className="pulse"/>:<Check size={18}/>}{saving?'Saving...':modal==='add'?'Register Asset':'Save Changes'}
+            <div className="flex gap-3 mt-5">
+              <button onClick={closeModal} className="btn-ghost flex-1 justify-center py-2.5">Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="btn-primary flex-[2] justify-center py-2.5">
+                {saving?<><RefreshCw size={15} className="spin"/> Saving...</>:<><Check size={15}/> {modal==='add'?'Register Asset':'Save Changes'}</>}
               </button>
             </div>
           </div>

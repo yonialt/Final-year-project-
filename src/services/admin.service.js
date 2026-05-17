@@ -36,11 +36,15 @@ const getAnalyticsStats = async () => {
     pendingRequests,
     completedRequests,
     rejectedRequests,
+    totalDamageReports,
+    pendingDamageReports,
     totalMaintenance,
     repairDecisions,
     replaceDecisions,
+    completedMaintenance,
     totalUsers,
-    priceCatalog
+    priceCatalog,
+    totalAiRecommendations
   ] = await Promise.all([
     prisma.resource.count(),
     prisma.resource.count({ where: { status: 'AVAILABLE' } }),
@@ -50,11 +54,15 @@ const getAnalyticsStats = async () => {
     prisma.request.count({ where: { status: 'PENDING' } }),
     prisma.request.count({ where: { status: 'COMPLETED' } }),
     prisma.request.count({ where: { status: 'REJECTED' } }),
+    prisma.damageReport.count(),
+    prisma.damageReport.count({ where: { status: 'PENDING' } }),
     prisma.maintenance.count(),
     prisma.maintenance.count({ where: { aiDecision: 'REPAIR' } }),
     prisma.maintenance.count({ where: { aiDecision: 'REPLACE' } }),
+    prisma.maintenance.count({ where: { status: 'COMPLETED' } }),
     prisma.user.count(),
-    prisma.priceCatalog.findMany()
+    prisma.priceCatalog.findMany(),
+    prisma.aIRecommendation.count()
   ]);
 
   // Avg repair cost
@@ -87,6 +95,29 @@ const getAnalyticsStats = async () => {
     if (r.type === 'NEW_RESOURCE') requestsByDay[day].new += 1;
   });
 
+  // Recent damage reports
+  const recentDamageReports = await prisma.damageReport.findMany({
+    where: { createdAt: { gte: sevenDaysAgo } },
+    select: { createdAt: true, status: true }
+  });
+  const damageByDay = {};
+  recentDamageReports.forEach(r => {
+    const day = r.createdAt.toISOString().split('T')[0];
+    if (!damageByDay[day]) damageByDay[day] = { date: day, count: 0 };
+    damageByDay[day].count += 1;
+  });
+
+  // Recent AI recommendations
+  const recentAI = await prisma.aIRecommendation.findMany({
+    take: 10,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      damageReport: {
+        include: { resource: { select: { name: true, type: true } } }
+      }
+    }
+  });
+
   return {
     resources: {
       total: totalResources,
@@ -100,17 +131,27 @@ const getAnalyticsStats = async () => {
       completed: completedRequests,
       rejected: rejectedRequests
     },
+    damageReports: {
+      total: totalDamageReports,
+      pending: pendingDamageReports
+    },
     maintenance: {
       total: totalMaintenance,
+      completed: completedMaintenance,
       repairDecisions,
       replaceDecisions,
       avgRepairCost: repairAgg._avg.repairCost || 0,
       avgConfidence: repairAgg._avg.aiConfidence || 0,
       totalRepairCost: repairAgg._sum.repairCost || 0
     },
+    ai: {
+      totalRecommendations: totalAiRecommendations,
+      recentDecisions: recentAI
+    },
     users: { total: totalUsers },
     resourcesByType: resourcesByType.map(r => ({ type: r.type, count: r._count.type })),
     requestsByDay: Object.values(requestsByDay).sort((a, b) => a.date.localeCompare(b.date)),
+    damageReportsByDay: Object.values(damageByDay).sort((a, b) => a.date.localeCompare(b.date)),
     priceCatalog
   };
 };

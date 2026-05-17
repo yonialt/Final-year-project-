@@ -1,10 +1,11 @@
 const { Router } = require('express');
-const { getRequests, createRequest, updateStatus } = require('../controllers/request.controller');
-const { authenticate, authorize } = require('../middleware/auth.middleware');
+const { getRequests, getRequest, createRequest, updateStatus } = require('../controllers/request.controller');
+const { authenticate } = require('../middleware/auth.middleware');
 
 const router = Router();
 
 router.get('/', authenticate, getRequests);
+router.get('/:id', authenticate, getRequest);
 router.post('/', authenticate, createRequest);
 router.patch('/:id/status', authenticate, updateStatus);
 

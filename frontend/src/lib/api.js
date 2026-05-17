@@ -2,10 +2,9 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: 'http://localhost:3000',
-  timeout: 10000,
+  timeout: 15000,
 });
 
-// Attach JWT from localStorage on every request
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('jwt');
@@ -15,7 +14,6 @@ API.interceptors.request.use(
   (err) => Promise.reject(err)
 );
 
-// Global 401 handler — clear token and redirect to login
 API.interceptors.response.use(
   (res) => res,
   (err) => {
