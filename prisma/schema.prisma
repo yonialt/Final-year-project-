@@ -7,7 +7,144 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Enums ──────────────────────────────────────────────────────────────────
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(STAFF)
+  department    String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  damageReports DamageReport[]
+  maintenances  Maintenance[]  @relation("TechnicianMaintenances")
+  notifications Notification[]
+  requests      Request[]
+
+  @@map("users")
+}
+
+model Resource {
+  id            String         @id @default(cuid())
+  name          String
+  type          String
+  location      String
+  purchaseDate  DateTime
+  purchasePrice Float
+  status        ResourceStatus @default(AVAILABLE)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  damageReports DamageReport[]
+  maintenances  Maintenance[]
+  requests      Request[]
+
+  @@map("resources")
+}
+
+model Request {
+  id              String        @id @default(cuid())
+  userId          String
+  resourceId      String?
+  description     String
+  resourceName    String?
+  resourceType    String?
+  urgency         Priority      @default(MEDIUM)
+  reason          String?
+  status          RequestStatus @default(PENDING)
+  type            String
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  resource        Resource?     @relation(fields: [resourceId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
+
+  @@map("requests")
+}
+
+model DamageReport {
+  id               String             @id @default(cuid())
+  userId           String
+  resourceId       String
+  description      String
+  location         String
+  status           DamageReportStatus @default(PENDING)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  aiRecommendation AIRecommendation?
+  resource         Resource           @relation(fields: [resourceId], references: [id])
+  user             User               @relation(fields: [userId], references: [id])
+  maintenance      Maintenance?
+
+  @@map("damage_reports")
+}
+
+model Maintenance {
+  id              String       @id @default(cuid())
+  damageReportId  String       @unique
+  resourceId      String
+  technicianId    String
+  damageLevel     Int?
+  repairCost      Float?
+  inspectionNotes String?
+  inspectedAt     DateTime?
+  newPrice        Float?
+  age             Int?
+  aiDecision      String?
+  aiConfidence    Float?
+  aiMethod        String?
+  finalDecision   String?
+  officerNotes    String?
+  repairNotes     String?
+  repairedAt      DateTime?
+  status          String       @default("PENDING_INSPECTION")
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  damageReport    DamageReport @relation(fields: [damageReportId], references: [id])
+  resource        Resource     @relation(fields: [resourceId], references: [id])
+  technician      User         @relation("TechnicianMaintenances", fields: [technicianId], references: [id])
+
+  @@map("maintenance")
+}
+
+model AIRecommendation {
+  id             String       @id @default(cuid())
+  damageReportId String       @unique
+  decision       String
+  confidence     Float
+  costRatio      Float?
+  method         String?
+  inputData      Json?
+  metrics        Json?
+  createdAt      DateTime     @default(now())
+  damageReport   DamageReport @relation(fields: [damageReportId], references: [id])
+
+  @@map("ai_recommendations")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO")
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model PriceCatalog {
+  id           String   @id @default(cuid())
+  resourceType String   @unique
+  repairCost   Float
+  newPrice     Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("price_catalog")
+}
 
 enum Role {
   STAFF
@@ -51,174 +188,4 @@ enum Priority {
   LOW
   MEDIUM
   HIGH
-}
-
-// ─── User ───────────────────────────────────────────────────────────────────
-
-model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  password      String
-  role          Role      @default(STAFF)
-  department    String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  requests          Request[]
-  damageReports     DamageReport[]
-  maintenances      Maintenance[]      @relation("TechnicianMaintenances")
-  notifications     Notification[]
-
-  @@map("users")
-}
-
-// ─── Resource ───────────────────────────────────────────────────────────────
-
-model Resource {
-  id            String         @id @default(cuid())
-  name          String
-  type          String
-  location      String
-  purchaseDate  DateTime
-  purchasePrice Float
-  status        ResourceStatus @default(AVAILABLE)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  requests       Request[]
-  damageReports  DamageReport[]
-  maintenances   Maintenance[]
-
-  @@map("resources")
-}
-
-// ─── New Resource Request (Procurement Workflow) ────────────────────────────
-
-model Request {
-  id            String        @id @default(cuid())
-  userId        String
-  user          User          @relation(fields: [userId], references: [id])
-  resourceId    String?
-  resource      Resource?     @relation(fields: [resourceId], references: [id])
-  description   String
-  resourceName  String?       // For NEW_RESOURCE: what they want
-  resourceType  String?       // For NEW_RESOURCE: category
-  urgency       Priority      @default(MEDIUM)
-  reason        String?       // Why they need it
-  status        RequestStatus @default(PENDING)
-  type          String        // 'NEW_RESOURCE' or 'DAMAGE_REPORT' (legacy)
-  rejectionReason String?     // Reason when rejected
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@map("requests")
-}
-
-// ─── Damage Report (Separate Workflow) ──────────────────────────────────────
-
-model DamageReport {
-  id              String             @id @default(cuid())
-  userId          String
-  user            User               @relation(fields: [userId], references: [id])
-  resourceId      String
-  resource        Resource           @relation(fields: [resourceId], references: [id])
-  description     String
-  location        String             // Where the damage was found
-  status          DamageReportStatus @default(PENDING)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-
-  maintenance     Maintenance?
-  aiRecommendation AIRecommendation?
-
-  @@map("damage_reports")
-}
-
-// ─── Maintenance (Technician Workflow) ──────────────────────────────────────
-
-model Maintenance {
-  id             String    @id @default(cuid())
-  damageReportId String    @unique
-  damageReport   DamageReport @relation(fields: [damageReportId], references: [id])
-  resourceId     String
-  resource       Resource  @relation(fields: [resourceId], references: [id])
-  technicianId   String
-  technician     User      @relation("TechnicianMaintenances", fields: [technicianId], references: [id])
-
-  // Step 1: Technician Inspection
-  damageLevel    Int?      // 1 = Minor, 2 = Moderate, 3 = Severe
-  repairCost     Float?    // Technician estimate
-  inspectionNotes String?
-  inspectedAt    DateTime?
-
-  // External pricing
-  newPrice       Float?    // From e-commerce API
-  age            Int?      // Asset age in years
-
-  // Step 2: AI Decision
-  aiDecision     String?   // 'REPAIR' or 'REPLACE'
-  aiConfidence   Float?
-  aiMethod       String?   // 'random_forest' or 'heuristic_fallback'
-
-  // Step 3: Officer Final Decision
-  finalDecision  String?   // 'REPAIR' or 'REPLACE'
-  officerNotes   String?
-
-  // Step 4: Repair (if applicable)
-  repairNotes    String?
-  repairedAt     DateTime?
-
-  status         String    @default("PENDING_INSPECTION") // PENDING_INSPECTION, INSPECTED, AI_DECIDED, FINALIZED, REPAIR_IN_PROGRESS, COMPLETED
-
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  @@map("maintenance")
-}
-
-// ─── AI Recommendation Record ───────────────────────────────────────────────
-
-model AIRecommendation {
-  id              String   @id @default(cuid())
-  damageReportId  String   @unique
-  damageReport    DamageReport @relation(fields: [damageReportId], references: [id])
-  decision        String   // 'REPAIR' or 'REPLACE'
-  confidence      Float
-  costRatio       Float?
-  method          String?  // 'random_forest' or 'heuristic_fallback'
-  inputData       Json?    // Snapshot of input features
-  metrics         Json?    // AI output metrics
-  createdAt       DateTime @default(now())
-
-  @@map("ai_recommendations")
-}
-
-// ─── Notification System ────────────────────────────────────────────────────
-
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  title     String
-  message   String
-  type      String   @default("INFO") // INFO, SUCCESS, WARNING, ACTION
-  link      String?  // Frontend route to navigate to
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  @@map("notifications")
-}
-
-// ─── External Pricing API Mock ──────────────────────────────────────────────
-
-model PriceCatalog {
-  id           String   @id @default(cuid())
-  resourceType String   @unique
-  repairCost   Float
-  newPrice     Float
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@map("price_catalog")
 }
