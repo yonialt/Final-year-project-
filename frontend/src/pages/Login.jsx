@@ -21,7 +21,11 @@ export default function Login() {
       login(res.data.data.token);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password.');
+      if (!err.response) {
+        setError('Cannot reach server. Check that VITE_API_URL is set correctly in Vercel.');
+      } else {
+        setError(err.response?.data?.message || 'Invalid email or password.');
+      }
     } finally {
       setIsLoading(false);
     }

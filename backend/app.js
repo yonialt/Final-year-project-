@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const { PrismaClient } = require('@prisma/client');
 
 const authRoutes = require('./src/routes/auth.routes');
 const resourceRoutes = require('./src/routes/resource.routes');
@@ -14,14 +15,22 @@ const adminRoutes = require('./src/routes/admin.routes');
 const { errorHandler } = require('./src/middleware/error.middleware');
 
 const app = express();
+const prisma = new PrismaClient();
 
 // ─── Global Middleware ─────────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// ─── Health Check ─────────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => res.json({ status: 'ok', version: '3.0', service: 'SRMS-API' }));
+// ─── Health Check (tests DB too) ──────────────────────────────────────────────
+app.get('/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', version: '3.0', service: 'SRMS-API', database: 'connected' });
+  } catch (e) {
+    res.status(500).json({ status: 'ok', version: '3.0', service: 'SRMS-API', database: 'ERROR: ' + e.message });
+  }
+});
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/auth', authRoutes);
