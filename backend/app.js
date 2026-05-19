@@ -2,16 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 
-const authRoutes = require('./routes/auth.routes');
-const resourceRoutes = require('./routes/resource.routes');
-const requestRoutes = require('./routes/request.routes');
-const damageReportRoutes = require('./routes/damageReport.routes');
-const maintenanceRoutes = require('./routes/maintenance.routes');
-const pricingRoutes = require('./routes/pricing.routes');
-const notificationRoutes = require('./routes/notification.routes');
-const adminRoutes = require('./routes/admin.routes');
+const authRoutes = require('./src/routes/auth.routes');
+const resourceRoutes = require('./src/routes/resource.routes');
+const requestRoutes = require('./src/routes/request.routes');
+const damageReportRoutes = require('./src/routes/damageReport.routes');
+const maintenanceRoutes = require('./src/routes/maintenance.routes');
+const pricingRoutes = require('./src/routes/pricing.routes');
+const notificationRoutes = require('./src/routes/notification.routes');
+const adminRoutes = require('./src/routes/admin.routes');
 
-const { errorHandler } = require('./middleware/error.middleware');
+const { errorHandler } = require('./src/middleware/error.middleware');
 
 const app = express();
 
