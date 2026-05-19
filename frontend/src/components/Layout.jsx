@@ -82,17 +82,23 @@ export default function Layout({ children }) {
       <aside className="sidebar">
 
         {/* Logo block */}
-        <div style={{ display:'flex', alignItems:'center', gap:'0.6rem', marginBottom:'1.5rem', padding:'0 0.25rem' }}>
-          <img
-            src="/uog-logo.png"
-            alt="UoG"
-            style={{ width:44, height:44, objectFit:'contain', borderRadius:'50%', background:'rgba(255,255,255,0.15)', padding:3 }}
-            onError={e => e.target.style.display='none'}
-          />
-          <div>
-            <div style={{ fontWeight:800, fontSize:'0.88rem', lineHeight:1.2, letterSpacing:'0.01em' }}>SRMS Portal</div>
-            <div style={{ fontSize:'0.6rem', opacity:0.65, fontWeight:600, letterSpacing:'0.06em', textTransform:'uppercase' }}>
-              Univ. of Gondar
+        <div style={{ marginBottom:'1.25rem', padding:'0 0.25rem 1.25rem', borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'0.65rem' }}>
+            <div style={{
+              width:42, height:42, borderRadius:10, flexShrink:0, overflow:'hidden',
+              background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.2)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+            }}>
+              <img
+                src="/uog-logo.png"
+                alt="UoG"
+                style={{ width:36, height:36, objectFit:'contain' }}
+                onError={e => { e.target.style.display='none'; }}
+              />
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontWeight:800, fontSize:'0.9rem', lineHeight:1.25, letterSpacing:'-0.01em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>SRMS Portal</div>
+              <div style={{ fontSize:'0.62rem', opacity:0.6, fontWeight:600, letterSpacing:'0.07em', textTransform:'uppercase', marginTop:1 }}>Univ. of Gondar</div>
             </div>
           </div>
         </div>
@@ -159,10 +165,19 @@ export default function Layout({ children }) {
 
         {/* Top bar */}
         <div className="topbar">
-          {/* Breadcrumb hint */}
-          <div style={{ flex:1, display:'flex', alignItems:'center', gap:'0.6rem' }}>
-            <img src="/uog-logo.png" alt="UoG" style={{ width:30, height:30, objectFit:'contain', borderRadius:'50%', verticalAlign:'middle' }} onError={e=>e.target.style.display='none'}/>
-            <span style={{ fontSize:'0.78rem', fontWeight:700, color:'#1a3f6f', lineHeight:1 }}>University of Gondar — SRMS</span>
+          {/* Brand */}
+          <div style={{ display:'flex', alignItems:'center', gap:'0.65rem' }}>
+            <div style={{
+              width:32, height:32, borderRadius:8, overflow:'hidden', flexShrink:0,
+              background:'#eff6ff', border:'1px solid #dde6f5',
+              display:'flex', alignItems:'center', justifyContent:'center',
+            }}>
+              <img src="/uog-logo.png" alt="UoG" style={{ width:26, height:26, objectFit:'contain' }} onError={e=>e.target.style.display='none'}/>
+            </div>
+            <div>
+              <div style={{ fontSize:'0.82rem', fontWeight:800, color:'#1a3f6f', lineHeight:1.2 }}>University of Gondar</div>
+              <div style={{ fontSize:'0.62rem', color:'#64748b', fontWeight:500, letterSpacing:'0.02em' }}>Smart Resource Management System</div>
+            </div>
           </div>
 
           {/* Notification bell */}
@@ -241,7 +256,9 @@ export default function Layout({ children }) {
         </div>
 
         {/* Page content */}
-        {children}
+        <div className="page-content">
+          {children}
+        </div>
       </main>
     </div>
   );
