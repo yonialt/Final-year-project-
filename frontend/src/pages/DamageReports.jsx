@@ -23,9 +23,12 @@ const Badge = ({ status }) => {
 
 export default function DamageReports() {
   const { user } = useAuth();
-  const isStaff = user?.role === 'STAFF';
-  const isDeptHead = user?.role === 'DEPARTMENT_HEAD';
-  const isOfficer = ['RESOURCE_OFFICER', 'ADMIN'].includes(user?.role);
+  const isStaff    = user?.role === 'STAFF';
+  const isDeptHead  = user?.role === 'DEPARTMENT_HEAD';
+  const isDean      = user?.role === 'ACADEMIC_DEAN';
+  const isOfficer   = ['RESOURCE_OFFICER', 'ADMIN'].includes(user?.role);
+  const canReport   = isStaff || isDeptHead || isDean;  // roles allowed to submit damage reports
+  const userDept    = user?.department || '';
 
   const [reports, setReports] = useState([]);
   const [resources, setResources] = useState([]);
@@ -47,6 +50,12 @@ export default function DamageReports() {
       setResources(resRes.data.data);
     } catch { } finally { setLoading(false); }
   };
+
+  // Heads and Deans only see PENDING reports (ones they can still forward).
+  // Once forwarded the report drops off their view.
+  const visibleReports = (isDeptHead || isDean)
+    ? reports.filter(r => r.status === 'PENDING')
+    : reports;
 
   const handleSubmit = async () => {
     if (!form.resourceId || !form.description || !form.location) return;
@@ -71,7 +80,8 @@ export default function DamageReports() {
         <div>
           <h1 className="gradient-text text-3xl font-extrabold tracking-tight">Damage Reports</h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-            {isStaff ? 'Report damaged resources and track repair status.' :
+          {isStaff ? 'Report damaged resources and track repair status.' :
+            (isDeptHead || isDean) ? 'Report damage on your department assets and forward reports to the Resource Officer.' :
               isDeptHead ? 'Review and forward damage reports to the Resource Officer.' :
                 isOfficer ? 'Manage damage reports and assign technicians for inspection.' :
                   'View damage reports across the university.'}
@@ -79,7 +89,7 @@ export default function DamageReports() {
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost" onClick={fetchData}><RefreshCw size={15} /> Refresh</button>
-          {isStaff && (
+          {canReport && (
             <button className="btn-primary" onClick={() => setShowForm(true)}>
               <Plus size={16} /> Report Damage
             </button>
@@ -90,10 +100,10 @@ export default function DamageReports() {
       {/* Stats Row */}
       <div className="grid grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Total', count: reports.length, color: 'var(--accent-blue)' },
-          { label: 'Pending', count: reports.filter(r => r.status === 'PENDING').length, color: 'var(--accent-amber)' },
-          { label: 'In Progress', count: reports.filter(r => ['FORWARDED_TO_OFFICER', 'INSPECTION_ASSIGNED', 'AI_RECOMMENDED', 'REPAIR_ASSIGNED'].includes(r.status)).length, color: 'var(--accent-purple)' },
-          { label: 'Resolved', count: reports.filter(r => ['REPAIR_COMPLETED', 'REPLACED', 'CLOSED'].includes(r.status)).length, color: 'var(--accent-emerald)' },
+          { label: 'Total',       count: visibleReports.length,                                                                                                    color: 'var(--accent-blue)' },
+          { label: 'Pending',     count: visibleReports.filter(r => r.status === 'PENDING').length,                                                                color: 'var(--accent-amber)' },
+          { label: 'In Progress', count: visibleReports.filter(r => ['FORWARDED_TO_OFFICER','INSPECTION_ASSIGNED','AI_RECOMMENDED','REPAIR_ASSIGNED'].includes(r.status)).length, color: 'var(--accent-purple)' },
+          { label: 'Resolved',    count: visibleReports.filter(r => ['REPAIR_COMPLETED','REPLACED','CLOSED'].includes(r.status)).length,                           color: 'var(--accent-emerald)' },
         ].map(s => (
           <div key={s.label} className="glass-card" style={{ padding: '1rem' }}>
             <p className="text-[0.65rem] font-bold uppercase tracking-wider mb-1" style={{ color: s.color }}>{s.label}</p>
@@ -106,12 +116,14 @@ export default function DamageReports() {
       <div className="flex flex-col gap-3">
         {loading ? (
           <div className="text-center py-12 pulse" style={{ color: 'var(--accent-blue)' }}>Loading reports...</div>
-        ) : reports.length === 0 ? (
+        ) : visibleReports.length === 0 ? (
           <div className="glass-card text-center py-12">
             <AlertTriangle size={40} className="mx-auto mb-4" style={{ opacity: 0.2 }} />
-            <p style={{ color: 'var(--text-dim)' }}>No damage reports found.</p>
+            <p style={{ color: 'var(--text-dim)' }}>
+              {(isDeptHead || isDean) ? 'No pending reports to action.' : 'No damage reports found.'}
+            </p>
           </div>
-        ) : reports.map(report => (
+        ) : visibleReports.map(report => (
           <div key={report.id} className="glass-card" style={{ padding: '1.25rem 1.5rem' }}>
             <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
@@ -134,7 +146,7 @@ export default function DamageReports() {
                   </div>
                 )}
               </div>
-              {isDeptHead && report.status === 'PENDING' && (
+              {(isDeptHead || isDean) && report.status === 'PENDING' && (
                 <button onClick={() => handleForward(report.id)} className="btn-primary ml-4 shrink-0">
                   <Send size={14} /> Forward to Officer
                 </button>
@@ -178,9 +190,18 @@ export default function DamageReports() {
                 <label className="text-[0.7rem] font-bold uppercase block mb-1.5" style={{ color: 'var(--text-dim)' }}>Damaged Resource</label>
                 <select className="input-glass" value={form.resourceId} onChange={e => setForm(f => ({ ...f, resourceId: e.target.value }))}>
                   <option value="">Select the damaged asset...</option>
-                  {resources.filter(r => r.status !== 'DISPOSED').map(r => (
-                    <option key={r.id} value={r.id}>{r.name} — {r.location}</option>
-                  ))}
+                  {resources
+                    .filter(r => {
+                      if (r.status === 'DISPOSED') return false;
+                      // Heads and Deans can only report on their own dept assets
+                      if (isDeptHead || isDean) {
+                        return (r.ownerDepartment || '').toLowerCase() === userDept.toLowerCase();
+                      }
+                      return true;
+                    })
+                    .map(r => (
+                      <option key={r.id} value={r.id}>{r.name} — {r.location}{r.ownerDepartment ? ` (${r.ownerDepartment})` : ''}</option>
+                    ))}
                 </select>
               </div>
               {form.resourceId && (

@@ -2,6 +2,39 @@ import React, { useState, useEffect } from 'react';
 import API from '../lib/api';
 import { Trash2, Edit3, X, Check, Shield, RefreshCw, Search, UserPlus, Eye, EyeOff } from 'lucide-react';
 
+const DEPARTMENTS = [
+  'Computer Science',
+  'Information Technology',
+  'Software Engineering',
+  'Electrical Engineering',
+  'Civil Engineering',
+  'Mechanical Engineering',
+  'Medicine',
+  'Nursing',
+  'Pharmacy',
+  'Public Health',
+  'Law',
+  'Economics',
+  'Business Administration',
+  'Accounting & Finance',
+  'Management',
+  'Mathematics',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'English Language & Literature',
+  'History',
+  'Geography',
+  'Psychology',
+  'Social Work',
+  'Agriculture',
+  'Veterinary Medicine',
+  'Architecture',
+  'Environmental Science',
+  'Library & Information Science',
+  'Journalism & Communication',
+];
+
 const ROLE_COLORS = {
   ADMIN:            { color:'#f59e0b', bg:'rgba(245,158,11,0.1)' },
   STAFF:            { color:'var(--text-dim)', bg:'rgba(255,255,255,0.05)' },
@@ -205,7 +238,10 @@ export default function Users() {
             </div>
             <div className="mb-5">
               <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Department</label>
-              <input className="input-glass" value={editForm.department} onChange={e=>setEditForm(f=>({...f,department:e.target.value}))} placeholder="e.g. Computer Science"/>
+              <select className="input-glass" value={editForm.department} onChange={e=>setEditForm(f=>({...f,department:e.target.value}))}>
+                <option value="">— Select Department —</option>
+                {DEPARTMENTS.map(d=><option key={d} value={d}>{d}</option>)}
+              </select>
             </div>
             <div className="flex gap-3">
               <button onClick={closeEdit} className="btn-ghost flex-1 justify-center py-2.5">Cancel</button>
@@ -274,7 +310,10 @@ export default function Users() {
             </div>
             <div className="mb-5">
               <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Department</label>
-              <input className="input-glass" value={registerForm.department} onChange={e=>setRegisterForm(f=>({...f,department:e.target.value}))} placeholder="e.g. Computer Science"/>
+              <select className="input-glass" value={registerForm.department} onChange={e=>setRegisterForm(f=>({...f,department:e.target.value}))}>
+                <option value="">— Select Department —</option>
+                {DEPARTMENTS.map(d=><option key={d} value={d}>{d}</option>)}
+              </select>
             </div>
             <div className="flex gap-3">
               <button onClick={closeRegister} className="btn-ghost flex-1 justify-center py-2.5">Cancel</button>

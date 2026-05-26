@@ -58,6 +58,16 @@ export default function Requests() {
     catch { } finally { setLoading(false); }
   };
 
+  // Filter the list that gets rendered based on role:
+  // Heads see only PENDING (what they can act on)
+  // Deans see only APPROVED_BY_HEAD (what they can act on)
+  // Once actioned the item is gone from their view
+  const visibleRequests = (() => {
+    if (user?.role === 'DEPARTMENT_HEAD') return requests.filter(r => r.status === 'PENDING');
+    if (user?.role === 'ACADEMIC_DEAN')   return requests.filter(r => r.status === 'APPROVED_BY_HEAD');
+    return requests;
+  })();
+
   const handleApprove = async (id) => {
     const nextStatus = user.role === 'RESOURCE_OFFICER'
       ? (requests.find(r => r.id === id)?.status === 'APPROVED_BY_OFFICER' ? 'PROCURED' : 'APPROVED_BY_OFFICER')
@@ -93,15 +103,14 @@ export default function Requests() {
         <div>
           <h1 className="gradient-text text-3xl font-extrabold tracking-tight">Resource Requests</h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-            {user?.role === 'STAFF' ? 'Submit and track new resource procurement requests.' :
-              user?.role === 'DEPARTMENT_HEAD' ? 'Review and approve staff resource requests.' :
-                user?.role === 'ACADEMIC_DEAN' ? 'Final approval authority for resource procurement.' :
-                  'Manage procurement and execute approved requests.'}
+            {['STAFF', 'DEPARTMENT_HEAD', 'ACADEMIC_DEAN'].includes(user?.role)
+              ? 'Submit and track new resource procurement requests.'
+              : 'Manage procurement and execute approved requests.'}
           </p>
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost" onClick={fetchRequests}><RefreshCw size={15} /> Refresh</button>
-          {user?.role === 'STAFF' && (
+          {['STAFF', 'DEPARTMENT_HEAD', 'ACADEMIC_DEAN'].includes(user?.role) && (
             <button className="btn-primary" onClick={() => setShowForm(true)}>
               <Plus size={16} /> New Request
             </button>
@@ -113,12 +122,12 @@ export default function Requests() {
       <div className="flex flex-col gap-3">
         {loading ? (
           <div className="text-center py-12 pulse" style={{ color: 'var(--accent-blue)' }}>Loading requests...</div>
-        ) : requests.length === 0 ? (
+        ) : visibleRequests.length === 0 ? (
           <div className="glass-card text-center py-12">
             <FileText size={40} className="mx-auto mb-4" style={{ opacity: 0.2 }} />
-            <p style={{ color: 'var(--text-dim)' }}>No requests found.</p>
+            <p style={{ color: 'var(--text-dim)' }}>No pending requests to action.</p>
           </div>
-        ) : requests.map(req => {
+        ) : visibleRequests.map(req => {
           const canApprove = canApproveMap[user?.role]?.(req) || false;
           const urgStyle = URGENCY_STYLE[req.urgency] || URGENCY_STYLE.MEDIUM;
           return (

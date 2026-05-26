@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Search, Trash2, Edit3, X, Check, Layers, MapPin, Calendar, DollarSign, RefreshCw, Package, Building2 } from 'lucide-react';
+import { Plus, Search, Trash2, Edit3, X, Check, Layers, MapPin, Calendar, DollarSign, RefreshCw, Package, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const PAGE_SIZE = 10;
 
 const STATUS_STYLE = {
   AVAILABLE: { color: 'var(--accent-emerald)', bg: 'rgba(52,211,153,0.1)' },
@@ -30,6 +32,7 @@ export default function Resources() {
   const [form, setForm] = useState(BLANK);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => { fetchResources(); }, []);
 
@@ -84,6 +87,13 @@ export default function Resources() {
       (r.ownerDepartment || '').toLowerCase().includes(q)
     ) && (filterStatus === 'ALL' || r.status === filterStatus);
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const paginated  = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset to page 1 whenever search/filter changes
+  useEffect(() => { setPage(1); }, [search, filterStatus]);
 
   const Badge = ({ status }) => {
     const s = STATUS_STYLE[status] || STATUS_STYLE.AVAILABLE;
@@ -159,11 +169,11 @@ export default function Resources() {
             <tbody>
               {loading ? (
                 <tr><td colSpan="8" className="text-center py-12"><div className="pulse" style={{ color: 'var(--accent-blue)' }}>Loading assets...</div></td></tr>
-              ) : filtered.length === 0 ? (
+              ) : paginated.length === 0 ? (
                 <tr><td colSpan="8" className="text-center py-12" style={{ color: 'var(--text-dim)' }}>
                   <Package size={36} className="mx-auto mb-3" style={{ opacity: 0.2 }} />No assets match your criteria.
                 </td></tr>
-              ) : filtered.map(r => (
+              ) : paginated.map(r => (
                 <tr key={r.id} className="table-row-hover" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                   <td className="px-4 py-3">
                     <div className="font-bold text-sm">{r.name}</div>
@@ -197,6 +207,85 @@ export default function Resources() {
             </tbody>
           </table>
         </div>
+
+        {/* ── Pagination bar ── */}
+        {!loading && filtered.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0.75rem 1.25rem',
+            borderTop: '1px solid var(--border-glass)',
+            background: 'var(--bg-subtle)',
+          }}>
+            {/* row count */}
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 500 }}>
+              Showing {((safePage - 1) * PAGE_SIZE) + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length} assets
+            </span>
+
+            {/* page buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 30, height: 30, borderRadius: 6, cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                  border: '1px solid var(--border-glass)',
+                  background: safePage === 1 ? 'transparent' : '#fff',
+                  color: safePage === 1 ? 'var(--text-dim)' : 'var(--text-main)',
+                  opacity: safePage === 1 ? 0.45 : 1,
+                  transition: 'all 0.18s',
+                }}
+              >
+                <ChevronLeft size={14} />
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(n => n === 1 || n === totalPages || Math.abs(n - safePage) <= 1)
+                .reduce((acc, n, idx, arr) => {
+                  if (idx > 0 && n - arr[idx - 1] > 1) acc.push('...');
+                  acc.push(n);
+                  return acc;
+                }, [])
+                .map((item, idx) =>
+                  item === '...' ? (
+                    <span key={`ellipsis-${idx}`} style={{ fontSize: '0.8rem', color: 'var(--text-dim)', padding: '0 0.25rem' }}>…</span>
+                  ) : (
+                    <button
+                      key={item}
+                      onClick={() => setPage(item)}
+                      style={{
+                        width: 30, height: 30, borderRadius: 6, cursor: 'pointer',
+                        border: safePage === item ? 'none' : '1px solid var(--border-glass)',
+                        background: safePage === item ? 'var(--accent-blue)' : '#fff',
+                        color: safePage === item ? '#fff' : 'var(--text-main)',
+                        fontWeight: safePage === item ? 700 : 400,
+                        fontSize: '0.8rem',
+                        transition: 'all 0.18s',
+                        boxShadow: safePage === item ? '0 2px 8px rgba(26,86,219,0.28)' : 'none',
+                      }}
+                    >{item}</button>
+                  )
+                )
+              }
+
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 30, height: 30, borderRadius: 6, cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                  border: '1px solid var(--border-glass)',
+                  background: safePage === totalPages ? 'transparent' : '#fff',
+                  color: safePage === totalPages ? 'var(--text-dim)' : 'var(--text-main)',
+                  opacity: safePage === totalPages ? 0.45 : 1,
+                  transition: 'all 0.18s',
+                }}
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal */}
