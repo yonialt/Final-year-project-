@@ -1,10 +1,11 @@
 const { Router } = require('express');
-const { register, login, getMe } = require('../controllers/auth.controller');
+const { register, login, getMe, changePassword } = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const {
   validate,
   registerRules,
   loginRules,
+  changePasswordRules,
 } = require('../middleware/validate.middleware');
 
 const router = Router();
@@ -26,5 +27,11 @@ router.post('/login', loginRules, validate, login);
  * @access  Private (requires Bearer JWT)
  */
 router.get('/me', authenticate, getMe);
+
+/**
+ * @route   POST /auth/change-password
+ * @access  Private (requires Bearer JWT)
+ */
+router.post('/change-password', authenticate, changePasswordRules, validate, changePassword);
 
 module.exports = router;

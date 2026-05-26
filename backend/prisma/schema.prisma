@@ -12,6 +12,7 @@ model User {
   name          String
   email         String         @unique
   password      String
+  mustChangePassword Boolean        @default(false)
   role          Role           @default(STAFF)
   department    String?
   createdAt     DateTime       @default(now())
@@ -25,18 +26,19 @@ model User {
 }
 
 model Resource {
-  id            String         @id @default(cuid())
-  name          String
-  type          String
-  location      String
-  purchaseDate  DateTime
-  purchasePrice Float
-  status        ResourceStatus @default(AVAILABLE)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  damageReports DamageReport[]
-  maintenances  Maintenance[]
-  requests      Request[]
+  id              String         @id @default(cuid())
+  name            String
+  type            String
+  location        String
+  ownerDepartment String?
+  purchaseDate    DateTime
+  purchasePrice   Float
+  status          ResourceStatus @default(AVAILABLE)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  damageReports   DamageReport[]
+  maintenances    Maintenance[]
+  requests        Request[]
 
   @@map("resources")
 }

@@ -1,5 +1,12 @@
 const adminService = require('../services/admin.service');
 
+const createUser = async (req, res, next) => {
+  try {
+    const user = await adminService.createUser(req.body);
+    res.status(201).json({ message: 'User created successfully', data: user });
+  } catch (err) { next(err); }
+};
+
 const getUsers = async (req, res, next) => {
   try {
     res.json({ data: await adminService.getAllUsers() });
@@ -33,4 +40,10 @@ const getAnalytics = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getUsers, getUser, updateUser, deleteUser, getAnalytics };
+const getSystemStats = async (req, res, next) => {
+  try {
+    res.json({ data: await adminService.getSystemStats() });
+  } catch (err) { next(err); }
+};
+
+module.exports = { createUser, getUsers, getUser, updateUser, deleteUser, getAnalytics, getSystemStats };

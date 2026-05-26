@@ -1,4 +1,36 @@
+const bcrypt = require('bcryptjs');
 const prisma = require('../config/prisma');
+
+const SALT_ROUNDS = 10;
+
+/**
+ * Admin creates a new user with a default password.
+ * The user will be required to change the password on first login.
+ */
+const createUser = async ({ name, email, password, role, department }) => {
+  // Check for existing account
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    const err = new Error('Email is already in use');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+
+  return await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: hashed,
+      mustChangePassword: true,
+      ...(role && { role }),
+      ...(department && { department }),
+    },
+    select: { id: true, name: true, email: true, role: true, department: true, createdAt: true },
+  });
+};
+
 
 const getAllUsers = async () => {
   return await prisma.user.findMany({
@@ -156,4 +188,67 @@ const getAnalyticsStats = async () => {
   };
 };
 
-module.exports = { getAllUsers, getUserById, updateUser, deleteUser, getAnalyticsStats };
+/**
+ * System-level stats for the Admin dashboard.
+ * Returns user directory, role breakdown, KPI counters, recent users & activity.
+ */
+const getSystemStats = async () => {
+  const [
+    users,
+    totalResources,
+    totalRequests,
+    activeRequests,
+    totalDamageReports,
+    pendingDamageReports,
+    totalMaintenance,
+    completedMaintenance,
+    recentNotifications,
+  ] = await Promise.all([
+    prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, department: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.resource.count(),
+    prisma.request.count(),
+    prisma.request.count({ where: { status: { notIn: ['COMPLETED', 'REJECTED'] } } }),
+    prisma.damageReport.count(),
+    prisma.damageReport.count({ where: { status: { notIn: ['CLOSED', 'REPAIR_COMPLETED', 'REPLACED'] } } }),
+    prisma.maintenance.count(),
+    prisma.maintenance.count({ where: { status: 'COMPLETED' } }),
+    prisma.notification.findMany({
+      take: 15,
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, title: true, message: true, type: true, createdAt: true, user: { select: { name: true, role: true } } },
+    }),
+  ]);
+
+  // Role distribution
+  const roleDistribution = users.reduce((acc, u) => {
+    acc[u.role] = (acc[u.role] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Recent users (joined in the last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const recentUsers = users.filter(u => new Date(u.createdAt) >= thirtyDaysAgo);
+
+  return {
+    users,
+    totalUsers: users.length,
+    roleDistribution,
+    recentUsersCount: recentUsers.length,
+    kpis: {
+      totalResources,
+      totalRequests,
+      activeRequests,
+      totalDamageReports,
+      pendingDamageReports,
+      totalMaintenance,
+      completedMaintenance,
+    },
+    recentActivity: recentNotifications,
+  };
+};
+
+module.exports = { createUser, getAllUsers, getUserById, updateUser, deleteUser, getAnalyticsStats, getSystemStats };

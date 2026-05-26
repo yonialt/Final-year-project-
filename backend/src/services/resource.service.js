@@ -55,6 +55,7 @@ const replaceResource = async (oldResourceId, newData) => {
         name: newData.name || oldResource.name,
         type: newData.type || oldResource.type,
         location: newData.location || oldResource.location,
+        ownerDepartment: newData.ownerDepartment || oldResource.ownerDepartment,
         purchaseDate: new Date(),
         purchasePrice: newData.purchasePrice || oldResource.purchasePrice,
         status: 'AVAILABLE'

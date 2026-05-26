@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import API from '../lib/api';
-import { Trash2, Edit3, X, Check, Shield, RefreshCw, Search } from 'lucide-react';
+import { Trash2, Edit3, X, Check, Shield, RefreshCw, Search, UserPlus, Eye, EyeOff } from 'lucide-react';
 
 const ROLE_COLORS = {
   ADMIN:            { color:'#f59e0b', bg:'rgba(245,158,11,0.1)' },
@@ -25,6 +25,14 @@ export default function Users() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Register user state
+  const [showRegister, setShowRegister] = useState(false);
+  const [registerForm, setRegisterForm] = useState({ name:'', email:'', password:'', role:'STAFF', department:'' });
+  const [registering, setRegistering] = useState(false);
+  const [registerError, setRegisterError] = useState('');
+  const [registerSuccess, setRegisterSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
   useEffect(() => { fetchUsers(); }, []);
 
   const fetchUsers = async () => {
@@ -36,6 +44,32 @@ export default function Users() {
 
   const openEdit = (u) => { setEditForm({ role:u.role, department:u.department||'' }); setEditUser(u); };
   const closeEdit = () => { setEditUser(null); };
+
+  const openRegister = () => {
+    setRegisterForm({ name:'', email:'', password:'', role:'STAFF', department:'' });
+    setRegisterError('');
+    setRegisterSuccess('');
+    setShowPassword(false);
+    setShowRegister(true);
+  };
+  const closeRegister = () => { setShowRegister(false); setRegisterError(''); setRegisterSuccess(''); };
+
+  const handleCreate = async () => {
+    setRegisterError('');
+    setRegisterSuccess('');
+    if (!registerForm.name.trim()) { setRegisterError('Name is required.'); return; }
+    if (!registerForm.email.trim()) { setRegisterError('Email is required.'); return; }
+    if (registerForm.password.length < 6) { setRegisterError('Password must be at least 6 characters.'); return; }
+    setRegistering(true);
+    try {
+      await API.post('/admin/users', registerForm);
+      setRegisterSuccess('User created successfully! They must change their password on first login.');
+      fetchUsers();
+      setTimeout(() => closeRegister(), 2000);
+    } catch (e) {
+      setRegisterError(e.response?.data?.message || 'Failed to create user.');
+    } finally { setRegistering(false); }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -70,7 +104,12 @@ export default function Users() {
           <h1 className="gradient-text text-3xl font-extrabold tracking-tight">User Management</h1>
           <p className="mt-1 text-sm" style={{color:'var(--text-muted)'}}>Manage system users, roles, and department assignments.</p>
         </div>
-        <button className="btn-ghost" onClick={fetchUsers}><RefreshCw size={15}/> Refresh</button>
+        <div style={{display:'flex', gap:'0.5rem'}}>
+          <button className="btn-primary" onClick={openRegister} style={{display:'flex',alignItems:'center',gap:'0.4rem'}}>
+            <UserPlus size={15}/> Register User
+          </button>
+          <button className="btn-ghost" onClick={fetchUsers}><RefreshCw size={15}/> Refresh</button>
+        </div>
       </header>
 
       {/* Role Summary */}
@@ -85,12 +124,12 @@ export default function Users() {
 
       {/* Table */}
       <div className="glass-card overflow-hidden" style={{padding:0}}>
-        <div className="flex gap-3 p-4" style={{borderBottom:'1px solid var(--border-glass)'}}>
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{color:'var(--text-dim)'}}/>
-            <input className="input-glass pl-10" placeholder="Search by name, email or role..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        <div className="table-search-bar">
+          <div className="search-wrap">
+            <Search size={16} style={{position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:'var(--text-dim)'}}/>
+            <input className="input-glass" style={{paddingLeft:'2.25rem'}} placeholder="Search by name, email or role..." value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
-          <span className="flex items-center text-xs font-semibold px-2 whitespace-nowrap" style={{color:'var(--text-dim)'}}>
+          <span style={{flex:'0 0 auto', fontSize:'0.8rem', fontWeight:600, color:'var(--text-dim)', whiteSpace:'nowrap'}}>
             {filtered.length} of {users.length} users
           </span>
         </div>
@@ -100,7 +139,7 @@ export default function Users() {
             <thead>
               <tr style={{borderBottom:'1px solid var(--border-glass)'}}>
                 {['User','Email','Role','Department','Joined','Actions'].map(h=>(
-                  <th key={h} className="text-left px-4 py-3 text-[0.65rem] font-bold uppercase tracking-wider" style={{color:'var(--text-dim)'}}>{h}</th>
+                  <th key={h} style={{textAlign:'left', padding:'0.7rem 1rem', fontSize:'0.7rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', color:'var(--text-dim)', whiteSpace:'nowrap'}}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -172,6 +211,75 @@ export default function Users() {
               <button onClick={closeEdit} className="btn-ghost flex-1 justify-center py-2.5">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="btn-primary flex-[2] justify-center py-2.5">
                 {saving?<><RefreshCw size={15} className="spin"/> Saving...</>:<><Check size={15}/> Save Changes</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Register Modal */}
+      {showRegister && (
+        <div className="modal-overlay">
+          <div className="glass-card modal-card animate-in" style={{maxWidth:440}}>
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-xl font-extrabold">Register New User</h2>
+              <button onClick={closeRegister} style={{background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer'}}><X size={20}/></button>
+            </div>
+
+            {registerError && (
+              <div style={{background:'rgba(251,113,133,0.1)',border:'1px solid rgba(251,113,133,0.25)',borderRadius:8,padding:'0.6rem 0.85rem',marginBottom:'0.85rem',fontSize:'0.82rem',color:'var(--accent-rose)'}}>
+                {registerError}
+              </div>
+            )}
+            {registerSuccess && (
+              <div style={{background:'rgba(52,211,153,0.1)',border:'1px solid rgba(52,211,153,0.25)',borderRadius:8,padding:'0.6rem 0.85rem',marginBottom:'0.85rem',fontSize:'0.82rem',color:'var(--accent-emerald)'}}>
+                ✅ {registerSuccess}
+              </div>
+            )}
+
+            <div className="mb-3">
+              <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Full Name</label>
+              <input className="input-glass" value={registerForm.name} onChange={e=>setRegisterForm(f=>({...f,name:e.target.value}))} placeholder="e.g. John Doe"/>
+            </div>
+            <div className="mb-3">
+              <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Email</label>
+              <input className="input-glass" type="email" value={registerForm.email} onChange={e=>setRegisterForm(f=>({...f,email:e.target.value}))} placeholder="e.g. john@uog.edu.et"/>
+            </div>
+            <div className="mb-3">
+              <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Default Password</label>
+              <div style={{position:'relative'}}>
+                <input
+                  className="input-glass"
+                  type={showPassword ? 'text' : 'password'}
+                  value={registerForm.password}
+                  onChange={e=>setRegisterForm(f=>({...f,password:e.target.value}))}
+                  placeholder="Min 6 characters"
+                  style={{paddingRight:'2.5rem'}}
+                />
+                <button
+                  type="button"
+                  onClick={()=>setShowPassword(!showPassword)}
+                  style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--text-dim)',padding:2}}
+                >
+                  {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
+                </button>
+              </div>
+              <p style={{fontSize:'0.68rem',color:'var(--text-dim)',marginTop:4}}>User will be required to change this on first login.</p>
+            </div>
+            <div className="mb-3">
+              <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Role</label>
+              <select className="input-glass" value={registerForm.role} onChange={e=>setRegisterForm(f=>({...f,role:e.target.value}))}>
+                {Object.keys(ROLE_COLORS).map(r=><option key={r} value={r}>{r.replace(/_/g,' ')}</option>)}
+              </select>
+            </div>
+            <div className="mb-5">
+              <label className="text-[0.7rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Department</label>
+              <input className="input-glass" value={registerForm.department} onChange={e=>setRegisterForm(f=>({...f,department:e.target.value}))} placeholder="e.g. Computer Science"/>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={closeRegister} className="btn-ghost flex-1 justify-center py-2.5">Cancel</button>
+              <button onClick={handleCreate} disabled={registering} className="btn-primary flex-[2] justify-center py-2.5">
+                {registering?<><RefreshCw size={15} className="spin"/> Creating...</>:<><UserPlus size={15}/> Create User</>}
               </button>
             </div>
           </div>

@@ -157,8 +157,6 @@ cd frontend && npm run dev
 - **Backend API:** http://localhost:3000
 - **AI Service:** http://localhost:5000
 
----
-
 ## 🔑 Demo Credentials
 
 All accounts use password: **`Admin@1234`**

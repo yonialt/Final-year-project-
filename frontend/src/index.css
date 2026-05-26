@@ -310,6 +310,24 @@ textarea.input-glass { resize: vertical; min-height: 80px; }
 
 /* ─── Tables ─────────────────────────────────────────────────────────────── */
 .table-row-hover:hover { background: var(--bg-subtle); }
+table th { padding: 0.7rem 1rem; }
+table td { padding: 0.6rem 1rem; }
+.table-search-bar {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-glass);
+  align-items: center;
+}
+.table-search-bar .search-wrap {
+  position: relative;
+  flex: 3;
+  min-width: 0;
+}
+.table-search-bar .filter-wrap {
+  flex: 0 0 auto;
+  width: 160px;
+}
 
 /* ─── Top bar strip ──────────────────────────────────────────────────────── */
 .topbar {

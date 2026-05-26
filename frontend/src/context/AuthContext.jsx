@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [token,  setToken]  = useState(localStorage.getItem('jwt') || null);
   const [user,   setUser]   = useState(null);
   const [loading,setLoading]= useState(true);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   // Verify token and load profile on mount
   useEffect(() => {
@@ -16,6 +17,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const res = await API.get('/auth/me');
           setUser(res.data.data.user);
+          setMustChangePassword(res.data.data.user.mustChangePassword || false);
         } catch {
           logout();
         }
@@ -25,8 +27,9 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, [token]);
 
-  const login = (newToken) => {
+  const login = (newToken, changePasswordFlag = false) => {
     localStorage.setItem('jwt', newToken);
+    setMustChangePassword(changePasswordFlag);
     setToken(newToken);
   };
 
@@ -34,10 +37,15 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('jwt');
     setToken(null);
     setUser(null);
+    setMustChangePassword(false);
+  };
+
+  const clearMustChangePassword = () => {
+    setMustChangePassword(false);
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, isAuthenticated:!!token, loading }}>
+    <AuthContext.Provider value={{ token, user, login, logout, isAuthenticated:!!token, loading, mustChangePassword, clearMustChangePassword }}>
       {children}
     </AuthContext.Provider>
   );

@@ -9,6 +9,7 @@ import DamageReports from './pages/DamageReports';
 import Maintenance  from './pages/Maintenance';
 import Analytics    from './pages/Analytics';
 import Users        from './pages/Users';
+import ChangePassword from './pages/ChangePassword';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/maintenance"    element={<Maintenance />} />
         <Route path="/analytics"      element={<Analytics />} />
         <Route path="/users"          element={<Users />} />
+        <Route path="/change-password" element={<ChangePassword />} />
       </Route>
 
       <Route path="/"  element={<Navigate to="/dashboard" replace />} />

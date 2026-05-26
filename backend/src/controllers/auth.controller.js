@@ -50,4 +50,16 @@ const getMe = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getMe };
+/**
+ * POST /auth/change-password  (protected)
+ */
+const changePassword = async (req, res, next) => {
+  try {
+    const result = await authService.changePassword(req.user.id, req.body);
+    res.json({ message: result.message });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, getMe, changePassword };

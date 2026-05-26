@@ -18,8 +18,13 @@ export default function Login() {
     setIsLoading(true);
     try {
       const res = await API.post('/auth/login', { email, password });
-      login(res.data.data.token);
-      navigate('/dashboard');
+      const { token, mustChangePassword } = res.data.data;
+      login(token, mustChangePassword);
+      if (mustChangePassword) {
+        navigate('/change-password');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       if (!err.response) {
         setError('Cannot reach server. Check that VITE_API_URL is set correctly in Vercel.');
