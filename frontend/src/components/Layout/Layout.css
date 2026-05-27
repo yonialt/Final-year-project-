@@ -10,6 +10,10 @@
   max-width: 1200px;
 }
 
+.mobile-topbar {
+  display: none;
+}
+
 /* Simple Spinner */
 .spinner {
   width: 40px;
@@ -37,4 +41,48 @@
 .page-subtitle {
   color: var(--text-secondary);
   font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    max-width: 100%;
+    width: 100%;
+    padding: var(--space-lg) var(--space-md) var(--space-xl);
+  }
+
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg-primary);
+    padding: var(--space-sm) 0;
+    margin-bottom: var(--space-sm);
+  }
+
+  .mobile-menu-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .mobile-topbar-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
 }

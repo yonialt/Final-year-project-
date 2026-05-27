@@ -6,7 +6,7 @@ import SidebarToggle from './SidebarToggle';
 import './Sidebar.css';
 import './SidebarToggle.css';
 
-const Sidebar = () => {
+const Sidebar = ({ isMobile = false, mobileOpen = false, onCloseMobile = () => {} }) => {
   const { logout, user } = useAuth();
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebar-collapsed') === 'true'
@@ -28,8 +28,17 @@ const Sidebar = () => {
     { path: '/ai-panel', label: 'AI Panel', icon: BrainCircuit },
   ];
 
+  const sidebarClassName = [
+    'sidebar',
+    collapsed ? 'sidebar--collapsed' : '',
+    isMobile ? 'sidebar--mobile' : '',
+    isMobile && mobileOpen ? 'sidebar--mobile-open' : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
+    <>
+      {isMobile && mobileOpen && <button type="button" className="sidebar-overlay" onClick={onCloseMobile} aria-label="Close navigation menu" />}
+      <aside className={sidebarClassName}>
       {/* ── Header ── */}
       <div className="sidebar-header">
         <div className="logo-icon flex items-center justify-center">
@@ -49,6 +58,9 @@ const Sidebar = () => {
             to={item.path}
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             title={collapsed ? item.label : ''}
+            onClick={() => {
+              if (isMobile) onCloseMobile();
+            }}
           >
             <item.icon size={20} />
             {!collapsed && <span>{item.label}</span>}
@@ -68,14 +80,18 @@ const Sidebar = () => {
           )}
         </div>
         <button
-          onClick={logout}
+          onClick={() => {
+            logout();
+            if (isMobile) onCloseMobile();
+          }}
           className="logout-btn"
           title="Logout"
         >
           <LogOut size={20} />
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 

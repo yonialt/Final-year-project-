@@ -629,6 +629,10 @@ table td { padding: 0.6rem 1rem; }
     max-width: 100%;
   }
 
+  .dashboard-split-grid {
+    grid-template-columns: 1fr !important;
+  }
+
   /* Buttons: slightly smaller */
   .btn-primary,
   .btn-ghost,

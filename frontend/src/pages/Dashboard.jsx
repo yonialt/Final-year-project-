@@ -131,7 +131,7 @@ function AdminDashboard({ user }) {
       </div>
 
       {/* ── Main Grid: User Directory + Sidebar ── */}
-      <div style={{display:'grid', gap:'1.25rem', gridTemplateColumns:'1.8fr 1fr', marginBottom:'2rem'}}>
+      <div className="dashboard-split-grid" style={{display:'grid', gap:'1.25rem', gridTemplateColumns:'1.8fr 1fr', marginBottom:'2rem'}}>
 
         {/* Left: User Directory */}
         <div className="glass-card" style={{padding:0, overflow:'hidden'}}>
@@ -170,7 +170,7 @@ function AdminDashboard({ user }) {
             </div>
           </div>
 
-          <div style={{maxHeight:400, overflowY:'auto'}}>
+          <div className="table-responsive-wrap" style={{maxHeight:400, overflowY:'auto'}}>
             <table style={{width:'100%', borderCollapse:'collapse'}}>
               <thead>
                 <tr style={{borderBottom:'1px solid var(--border-glass)', position:'sticky', top:0, background:'var(--bg-card)', zIndex:1}}>
@@ -444,7 +444,7 @@ function ResourceDashboard({ user }) {
       </div>
 
       {/* Charts */}
-      <div style={{display:'grid', gap:'1.25rem', gridTemplateColumns:'1.6fr 1fr'}}>
+      <div className="dashboard-split-grid" style={{display:'grid', gap:'1.25rem', gridTemplateColumns:'1.6fr 1fr'}}>
         <div className="glass-card">
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem'}}>
             <h2 style={{fontWeight:700, fontSize:'1rem'}}>Maintenance Trajectory</h2>
