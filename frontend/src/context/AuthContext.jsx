@@ -7,8 +7,45 @@ export const useAuth = () => useContext(AuthContext);
 const IDLE_WARN_MS  = 14 * 60 * 1000;  // 14 min → show warning
 const IDLE_LIMIT_MS = 15 * 60 * 1000;  // 15 min → auto-logout
 
+const parseJwt = (token) => {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    return JSON.parse(window.atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return null;
+  }
+};
+
+const isTokenExpired = (token) => {
+  const decoded = parseJwt(token);
+  if (!decoded || !decoded.exp) return true;
+  return decoded.exp * 1000 < Date.now();
+};
+
+const getInitialToken = () => {
+  const t = localStorage.getItem('jwt');
+  if (!t) return null;
+
+  if (isTokenExpired(t)) {
+    localStorage.removeItem('jwt');
+    localStorage.removeItem('lastActivity');
+    return null;
+  }
+
+  const lastActivity = localStorage.getItem('lastActivity');
+  if (lastActivity && Date.now() - parseInt(lastActivity, 10) > IDLE_LIMIT_MS) {
+    localStorage.removeItem('jwt');
+    localStorage.removeItem('lastActivity');
+    return null;
+  }
+
+  localStorage.setItem('lastActivity', Date.now().toString());
+  return t;
+};
+
 export const AuthProvider = ({ children }) => {
-  const [token,  setToken]  = useState(localStorage.getItem('jwt') || null);
+  const [token,  setToken]  = useState(getInitialToken);
   const [user,   setUser]   = useState(null);
   const [loading,setLoading]= useState(true);
   const [mustChangePassword, setMustChangePassword] = useState(false);
@@ -38,6 +75,7 @@ export const AuthProvider = ({ children }) => {
   // ── Auth actions ──────────────────────────────────────────────────────────
   const login = (newToken, changePasswordFlag = false) => {
     localStorage.setItem('jwt', newToken);
+    localStorage.setItem('lastActivity', Date.now().toString());
     setMustChangePassword(changePasswordFlag);
     setToken(newToken);
   };
@@ -46,6 +84,7 @@ export const AuthProvider = ({ children }) => {
     clearTimeout(warnTimerRef.current);
     clearTimeout(logoutTimerRef.current);
     localStorage.removeItem('jwt');
+    localStorage.removeItem('lastActivity');
     setToken(null);
     setUser(null);
     setMustChangePassword(false);
@@ -60,6 +99,8 @@ export const AuthProvider = ({ children }) => {
     clearTimeout(warnTimerRef.current);
     clearTimeout(logoutTimerRef.current);
     setSessionWarning(false);
+
+    localStorage.setItem('lastActivity', Date.now().toString());
 
     // 14 min: show "still there?" banner
     warnTimerRef.current = setTimeout(() => {

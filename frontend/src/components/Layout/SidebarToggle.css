@@ -1,0 +1,52 @@
+/* ── SidebarToggle ─────────────────────────────────────────────────────────── */
+
+.sidebar-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* sizing */
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex-shrink: 0;
+
+  /* default: dark sidebar (navy) — white icon */
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.sidebar-toggle-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+/* Mirror the SVG horizontally when the sidebar is collapsed */
+.sidebar-toggle-btn--collapsed svg {
+  transform: scaleX(-1);
+}
+
+/* ── Light-sidebar variant (Layout/Sidebar.jsx white theme) ─────────────────── */
+.sidebar-toggle-btn--light {
+  color: #4a5568;
+}
+
+.sidebar-toggle-btn--light:hover {
+  background: #f1f3f5;
+  color: #1a202c;
+}
+
+.sidebar-toggle-btn--light:focus-visible {
+  outline: 2px solid #4299e1;
+}
+

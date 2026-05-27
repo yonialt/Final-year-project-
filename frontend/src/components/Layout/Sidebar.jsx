@@ -1,11 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Database, ClipboardList, Wrench, BrainCircuit, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import SidebarToggle from './SidebarToggle';
 import './Sidebar.css';
+import './SidebarToggle.css';
 
 const Sidebar = () => {
   const { logout, user } = useAuth();
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('sidebar-collapsed') === 'true'
+  );
+
+  const toggle = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('sidebar-collapsed', String(next));
+      return next;
+    });
+  };
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -16,36 +29,49 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
+      {/* ── Header ── */}
       <div className="sidebar-header">
         <div className="logo-icon flex items-center justify-center">
           <Database size={24} className="text-accent" />
         </div>
-        <h2 className="brand-name">CampusRes</h2>
+        {!collapsed && <h2 className="brand-name">CampusRes</h2>}
+
+        {/* Toggle button — sits at the right end of the header */}
+        <SidebarToggle collapsed={collapsed} onToggle={toggle} light />
       </div>
 
+      {/* ── Nav ── */}
       <nav className="sidebar-nav">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            title={collapsed ? item.label : ''}
           >
             <item.icon size={20} />
-            <span>{item.label}</span>
+            {!collapsed && <span>{item.label}</span>}
           </NavLink>
         ))}
       </nav>
 
+      {/* ── Footer ── */}
       <div className="sidebar-footer">
         <div className="user-info">
           <div className="avatar">{user?.name?.charAt(0) || 'U'}</div>
-          <div className="user-details">
-            <span className="user-name">{user?.name || 'User'}</span>
-            <span className="user-role text-muted">{user?.role || 'STAFF'}</span>
-          </div>
+          {!collapsed && (
+            <div className="user-details">
+              <span className="user-name">{user?.name || 'User'}</span>
+              <span className="user-role text-muted">{user?.role || 'STAFF'}</span>
+            </div>
+          )}
         </div>
-        <button onClick={logout} className="logout-btn" title="Logout">
+        <button
+          onClick={logout}
+          className="logout-btn"
+          title="Logout"
+        >
           <LogOut size={20} />
         </button>
       </div>

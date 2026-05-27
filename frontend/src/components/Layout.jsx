@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Database, ClipboardList, AlertTriangle,
-  Activity, BarChart2, Users, LogOut, Bell, Check, ChevronRight, KeyRound, UserPlus
+  Activity, BarChart2, Users, LogOut, Bell, Check, ChevronRight, KeyRound, UserPlus, Menu, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import API from '../lib/api';
+import SidebarToggle from './Layout/SidebarToggle';
 
 const NAV = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['ALL'] },
@@ -36,6 +37,35 @@ export default function Layout({ children }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
   const notifRef = useRef(null);
+  const [isCollapsed, setIsCollapsed] = useState(
+    () => localStorage.getItem('sidebar-collapsed') === 'true'
+  );
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('sidebar-collapsed', String(next));
+      return next;
+    });
+  };
+
+  const openMobile  = () => setIsMobileOpen(true);
+  const closeMobile = useCallback(() => setIsMobileOpen(false), []);
+
+  /* Lock body scroll while mobile drawer is open */
+  useEffect(() => {
+    document.body.style.overflow = isMobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isMobileOpen]);
+
+  /* Close drawer when viewport grows past mobile breakpoint */
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const handler = (e) => { if (e.matches) closeMobile(); };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [closeMobile]);
 
   const visibleNav = NAV.filter(
     item => item.roles.includes('ALL') || item.roles.includes(user?.role)
@@ -76,40 +106,54 @@ export default function Layout({ children }) {
 
   return (
     <div className="app-layout">
+
+      {/* ── Mobile backdrop ── */}
+      {isMobileOpen && (
+        <div className="sidebar-backdrop" onClick={closeMobile} aria-hidden="true" />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside className="sidebar">
-        <div style={{ marginBottom: '1.25rem', padding: '0 0.25rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{
-              width: 42, height: 42, borderRadius: 10, flexShrink: 0, overflow: 'hidden',
-              background: '#ffffff', border: '2px solid rgba(255,255,255,0.9)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <img src="/uog-logo.png" alt="UoG" style={{ width: 36, height: 36, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.25, letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>SRMS Portal</div>
-              <div style={{ fontSize: '0.62rem', opacity: 0.6, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', marginTop: 1 }}>Univ. of Gondar</div>
-            </div>
+      <aside className={`sidebar${isCollapsed ? ' collapsed' : ''}${isMobileOpen ? ' mobile-open' : ''}`}>
+
+        {/* ── Header: logo + brand + toggle ── */}
+        <div className="sidebar-brand-header">
+          {/* Logo mark */}
+          <div className="sidebar-logo">
+            <img src="/uog-logo.png" alt="UoG" style={{ width: 36, height: 36, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
           </div>
+
+          {/* Brand text — fades out when collapsed */}
+          <div className="sidebar-text-fade" style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.25, letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>SRMS Portal</div>
+            <div style={{ fontSize: '0.62rem', opacity: 0.6, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', marginTop: 1 }}>Univ. of Gondar</div>
+          </div>
+
+          {/* Claude-style toggle button */}
+          <SidebarToggle collapsed={isCollapsed} onToggle={toggleSidebar} />
         </div>
 
-        <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', opacity: 0.45, padding: '0 0.5rem', marginBottom: '0.5rem' }}>
+        <div className="sidebar-text-fade" style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', opacity: 0.45, padding: '0 0.5rem', marginBottom: '0.5rem' }}>
           Main Menu
         </div>
 
         <nav style={{ flex: 1, overflowY: 'auto' }}>
           {visibleNav.map(item => (
-            <NavLink key={item.path} to={item.path} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+            <NavLink
+              key={item.path}
+              to={item.path}
+              title={isCollapsed ? item.name : ''}
+              className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+              onClick={closeMobile}
+            >
               <item.icon size={17} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: '0.865rem' }}>{item.name}</span>
-              <ChevronRight size={13} style={{ marginLeft: 'auto', opacity: 0.35 }} />
+              <span className="sidebar-text-fade" style={{ fontSize: '0.865rem' }}>{item.name}</span>
+              <ChevronRight size={13} className="sidebar-text-fade" style={{ marginLeft: 'auto', opacity: 0.35 }} />
             </NavLink>
           ))}
         </nav>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '0.9rem', marginTop: 'auto' }}>
-          <div style={{
+          <div className="user-box" style={{
             display: 'flex', alignItems: 'center', gap: '0.6rem',
             background: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.6rem 0.75rem', marginBottom: '0.6rem',
             border: '1px solid rgba(255,255,255,0.1)',
@@ -122,27 +166,36 @@ export default function Layout({ children }) {
             }}>
               {user?.name?.charAt(0).toUpperCase() || '?'}
             </div>
-            <div style={{ overflow: 'hidden', flex: 1 }}>
+            <div className="sidebar-text-fade user-details" style={{ overflow: 'hidden', flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'User'}</div>
               <div style={{ fontSize: '0.62rem', opacity: 0.65, fontWeight: 600, letterSpacing: '0.03em' }}>{ROLE_LABEL[user?.role] || '—'}</div>
             </div>
           </div>
 
-          <button onClick={() => navigate('/change-password')} className="nav-link"
+          <button onClick={() => { navigate('/change-password'); closeMobile(); }} className="nav-link" title={isCollapsed ? "Change Password" : ""}
             style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', marginBottom: '0.25rem' }}>
-            <KeyRound size={16} /><span>Change Password</span>
+            <KeyRound size={16} style={{ flexShrink: 0 }} /><span className="sidebar-text-fade">Change Password</span>
           </button>
 
-          <button onClick={() => { logout(); navigate('/login'); }} className="nav-link"
+          <button onClick={() => { logout(); navigate('/login'); }} className="nav-link" title={isCollapsed ? "Sign Out" : ""}
             style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)' }}>
-            <LogOut size={16} /><span>Sign Out</span>
+            <LogOut size={16} style={{ flexShrink: 0 }} /><span className="sidebar-text-fade">Sign Out</span>
           </button>
         </div>
       </aside>
 
       {/* ── Main ── */}
-      <main className="main-content">
+      <main className={`main-content${isCollapsed ? ' collapsed' : ''}`}>
         <div className="topbar">
+          {/* Hamburger — only visible on mobile via CSS */}
+          <button
+            className="hamburger-btn"
+            onClick={openMobile}
+            aria-label="Open menu"
+            aria-expanded={isMobileOpen}
+          >
+            <Menu size={22} />
+          </button>
           {/* Brand — matches sidebar style */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <div style={{
