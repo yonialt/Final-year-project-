@@ -351,7 +351,6 @@ function ResourceDashboard({ user }) {
       setStats({
         resources: resources.length,
         requests: requests.filter(r => !['COMPLETED','REJECTED'].includes(r.status)).length,
-        damaged: resources.filter(r => r.status==='DAMAGED').length,
         damageReports: damageReports.filter(r => !['CLOSED','REPAIR_COMPLETED','REPLACED'].includes(r.status)).length,
         maintenance: maintenance.length,
         aiDecisions: maintenance.filter(m => m.aiDecision).length

@@ -63,8 +63,12 @@ export default function Requests() {
   // Deans see only APPROVED_BY_HEAD (what they can act on)
   // Once actioned the item is gone from their view
   const visibleRequests = (() => {
-    if (user?.role === 'DEPARTMENT_HEAD') return requests.filter(r => r.status === 'PENDING');
-    if (user?.role === 'ACADEMIC_DEAN')   return requests.filter(r => r.status === 'APPROVED_BY_HEAD');
+    if (user?.role === 'DEPARTMENT_HEAD') {
+      return requests.filter(r => r.status === 'PENDING' || r.userId === user.id);
+    }
+    if (user?.role === 'ACADEMIC_DEAN') {
+      return requests.filter(r => r.status === 'APPROVED_BY_HEAD' || r.userId === user.id);
+    }
     return requests;
   })();
 
@@ -157,9 +161,10 @@ export default function Requests() {
                       <strong>Reason:</strong> {req.reason}
                     </p>
                   )}
-                  {req.rejectionReason && (
-                    <div className="mt-2 px-3 py-1.5 rounded-lg text-xs" style={{ background: 'rgba(251,113,133,0.06)', border: '1px solid rgba(251,113,133,0.12)', color: 'var(--accent-rose)' }}>
-                      <strong>Rejection reason:</strong> {req.rejectionReason}
+                  {(req.rejectionReason || req.rejectedBy) && (
+                    <div className="mt-2 px-3 py-1.5 rounded-lg text-xs animate-in" style={{ background: 'rgba(251,113,133,0.06)', border: '1px solid rgba(251,113,133,0.12)', color: 'var(--accent-rose)' }}>
+                      {req.rejectedBy && <div className="mb-1 font-extrabold text-[0.7rem] uppercase tracking-wider">Rejected by: {req.rejectedBy}</div>}
+                      {req.rejectionReason && <p style={{ margin: 0 }}><strong>Reason:</strong> {req.rejectionReason}</p>}
                     </div>
                   )}
                 </div>

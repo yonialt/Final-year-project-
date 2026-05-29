@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation } from 'react-router-dom';
 import API from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { AlertTriangle, Plus, Clock, MapPin, User, ArrowRight, CheckCircle, Send, X, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Plus, Clock, MapPin, User, ArrowRight, CheckCircle, Send, X, RefreshCw, XCircle } from 'lucide-react';
 
 const STATUS_STYLE = {
   PENDING: { color: 'var(--accent-amber)', bg: 'rgba(251,191,36,0.1)', label: 'Pending' },
@@ -14,6 +15,7 @@ const STATUS_STYLE = {
   REPAIR_COMPLETED: { color: 'var(--accent-emerald)', bg: 'rgba(52,211,153,0.1)', label: 'Repair Complete' },
   REPLACED: { color: 'var(--accent-emerald)', bg: 'rgba(52,211,153,0.1)', label: 'Replaced' },
   CLOSED: { color: 'var(--text-dim)', bg: 'rgba(255,255,255,0.05)', label: 'Closed' },
+  REJECTED: { color: 'var(--accent-rose)', bg: 'rgba(251,113,133,0.1)', label: 'Rejected' },
 };
 
 const Badge = ({ status }) => {
@@ -23,6 +25,7 @@ const Badge = ({ status }) => {
 
 export default function DamageReports() {
   const { user } = useAuth();
+  const location = useLocation();
   const isStaff    = user?.role === 'STAFF';
   const isDeptHead  = user?.role === 'DEPARTMENT_HEAD';
   const isDean      = user?.role === 'ACADEMIC_DEAN';
@@ -36,8 +39,26 @@ export default function DamageReports() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ resourceId: '', description: '', location: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const resId = params.get('resourceId');
+    if (resId && resources.length > 0) {
+      const resource = resources.find(r => r.id === resId);
+      if (resource) {
+        setForm({
+          resourceId: resId,
+          description: '',
+          location: resource.location || ''
+        });
+        setShowForm(true);
+      }
+    }
+  }, [location.search, resources]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -51,8 +72,8 @@ export default function DamageReports() {
     } catch { } finally { setLoading(false); }
   };
 
-  // Heads and Deans only see PENDING reports (ones they can still forward).
-  // Once forwarded the report drops off their view.
+  // Heads and Deans only see PENDING reports (ones they can still forward or reject).
+  // Once acted on the report drops off their view.
   const visibleReports = (isDeptHead || isDean)
     ? reports.filter(r => r.status === 'PENDING')
     : reports;
@@ -70,6 +91,16 @@ export default function DamageReports() {
 
   const handleForward = async (id) => {
     try { await API.patch(`/damage-reports/${id}/forward`); fetchData(); } catch { }
+  };
+
+  const handleReject = async () => {
+    if (!rejectModal) return;
+    try {
+      await API.patch(`/damage-reports/${rejectModal}/reject`, { rejectionReason: rejectReason });
+      setRejectModal(null);
+      setRejectReason('');
+      fetchData();
+    } catch { }
   };
 
   const getSelectedResource = () => resources.find(r => r.id === form.resourceId);
@@ -132,7 +163,7 @@ export default function DamageReports() {
                   <Badge status={report.status} />
                 </div>
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{report.description}</p>
-                {report.aiRecommendation && (
+                 {report.aiRecommendation && (
                   <div className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg"
                     style={{ background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.1)' }}>
                     <span className="text-[0.7rem] pulse" style={{ color: 'var(--accent-blue)' }}>🤖 AI:</span>
@@ -145,12 +176,27 @@ export default function DamageReports() {
                     </span>
                   </div>
                 )}
+                {(report.rejectionReason || report.rejectedBy) && (
+                  <div className="mt-2 px-3 py-1.5 rounded-lg text-xs animate-in"
+                    style={{ background: 'rgba(244,63,94,0.04)', border: '1px solid rgba(244,63,94,0.12)', color: 'var(--accent-rose)', maxWidth: 'fit-content' }}>
+                    {report.rejectedBy && <div className="mb-1 font-extrabold text-[0.7rem] uppercase tracking-wider">Rejected by: {report.rejectedBy}</div>}
+                    {report.rejectionReason && <p style={{ margin: 0 }}><strong>Reason:</strong> {report.rejectionReason}</p>}
+                  </div>
+                )}
               </div>
-              {(isDeptHead || isDean) && report.status === 'PENDING' && (
-                <button onClick={() => handleForward(report.id)} className="btn-primary ml-4 shrink-0">
-                  <Send size={14} /> Forward to Officer
-                </button>
-              )}
+              <div className="flex gap-2 ml-4 shrink-0">
+                {(isDeptHead || isDean) && report.status === 'PENDING' && (
+                  <button onClick={() => handleForward(report.id)} className="btn-primary">
+                    <Send size={14} /> Forward to Officer
+                  </button>
+                )}
+                {(((isDeptHead || isDean) && report.status === 'PENDING') ||
+                  (isOfficer && report.status === 'FORWARDED_TO_OFFICER')) && (
+                  <button onClick={() => { setRejectModal(report.id); setRejectReason(''); }} className="btn-danger">
+                    <XCircle size={14} /> Reject
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex gap-4 pt-3 flex-wrap" style={{ borderTop: '1px solid var(--border-glass)' }}>
               <div className="flex items-center gap-1.5 text-[0.75rem]" style={{ color: 'var(--text-dim)' }}>
@@ -192,7 +238,6 @@ export default function DamageReports() {
                   <option value="">Select the damaged asset...</option>
                   {resources
                     .filter(r => {
-                      if (r.status === 'DISPOSED') return false;
                       // Heads and Deans can only report on their own dept assets
                       if (isDeptHead || isDean) {
                         return (r.ownerDepartment || '').toLowerCase() === userDept.toLowerCase();
@@ -228,6 +273,27 @@ export default function DamageReports() {
                 disabled={submitting || !form.resourceId || !form.description || !form.location}
                 className="btn-primary flex-[2] justify-center py-3">
                 {submitting ? <><RefreshCw size={15} className="spin" /> Submitting...</> : <><AlertTriangle size={15} /> Submit Report</>}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {rejectModal && createPortal(
+        <div className="modal-overlay">
+          <div className="glass-card modal-card animate-in" style={{ maxWidth: 460 }}>
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-extrabold">Reject Damage Report</h2>
+              <button onClick={() => setRejectModal(null)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-dim)' }}>Please specify a reason for rejecting this damage report.</p>
+            <textarea className="input-glass mb-4" rows="3" placeholder="Reason for rejection..."
+              value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
+            <div className="flex gap-3">
+              <button onClick={() => setRejectModal(null)} className="btn-ghost flex-1 justify-center py-2.5">Cancel</button>
+              <button onClick={handleReject} disabled={!rejectReason.trim()} className="btn-danger flex-[2] justify-center py-2.5">
+                <XCircle size={15} /> Confirm Rejection
               </button>
             </div>
           </div>

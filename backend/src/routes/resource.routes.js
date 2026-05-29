@@ -19,7 +19,7 @@ const resourceRules = [
   body('location').trim().notEmpty().withMessage('Location is required'),
   body('purchaseDate').notEmpty().isISO8601().withMessage('Valid purchase date required'),
   body('purchasePrice').notEmpty().isFloat({ min: 0 }).withMessage('Purchase price must be ≥ 0'),
-  body('status').optional().isIn(['AVAILABLE', 'IN_USE', 'DAMAGED', 'DISPOSED']).withMessage('Invalid status'),
+  body('userId').optional({ nullable: true }).isString().withMessage('User ID must be a string'),
 ];
 
 /** GET /resources */

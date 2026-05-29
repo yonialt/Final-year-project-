@@ -30,12 +30,6 @@ const createDamageReport = async (userId, data) => {
     include: INCLUDE
   });
 
-  // Mark the resource as DAMAGED
-  await prisma.resource.update({
-    where: { id: data.resourceId },
-    data: { status: 'DAMAGED' }
-  });
-
   // Notify department heads in the same department
   const user = await prisma.user.findUnique({ where: { id: userId } });
   const deptHeads = await prisma.user.findMany({
@@ -113,10 +107,39 @@ const updateStatus = async (id, status) => {
   });
 };
 
+const rejectDamageReport = async (id, rejectingUser, rejectionReason) => {
+  const report = await prisma.damageReport.findUnique({
+    where: { id },
+    include: { resource: true }
+  });
+  if (!report) throw new Error('Damage report not found');
+
+  const updatedReport = await prisma.damageReport.update({
+    where: { id },
+    data: {
+      status: 'REJECTED',
+      rejectionReason,
+      rejectedBy: `${rejectingUser.name} (${rejectingUser.role.replace(/_/g, ' ')})`
+    },
+    include: INCLUDE
+  });
+
+  // Notify the user who reported it
+  await notificationService.create(report.userId, {
+    title: 'Damage Report Rejected',
+    message: `Your damage report for "${report.resource?.name || 'resource'}" was rejected by ${rejectingUser.name}${rejectionReason ? ': ' + rejectionReason : ''}`,
+    type: 'WARNING',
+    link: '/damage-reports'
+  });
+
+  return updatedReport;
+};
+
 module.exports = {
   createDamageReport,
   getDamageReportsByRole,
   getDamageReportById,
   forwardToOfficer,
-  updateStatus
+  updateStatus,
+  rejectDamageReport
 };

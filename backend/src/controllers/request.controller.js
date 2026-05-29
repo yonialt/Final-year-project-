@@ -25,7 +25,7 @@ const createRequest = async (req, res, next) => {
 const updateStatus = async (req, res, next) => {
   try {
     const { status, rejectionReason } = req.body;
-    const request = await requestService.updateRequestStatus(req.params.id, status, req.user.role, rejectionReason);
+    const request = await requestService.updateRequestStatus(req.params.id, status, req.user.role, rejectionReason, req.user);
     res.json({ data: request });
   } catch (err) { next(err); }
 };

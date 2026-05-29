@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import API from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Wrench, Brain, CheckCircle, Info, DollarSign, Activity, X, User, RefreshCw, Zap, TrendingUp, AlertTriangle, Clock, Send } from 'lucide-react';
@@ -69,7 +70,7 @@ export default function Maintenance() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ damageLevel:1, repairCost:'', inspectionNotes:'' });
+  const [form, setForm] = useState({ damageLevel:1, inspectionNotes:'' });
   const [saving, setSaving] = useState(false);
 
   // Assign modal
@@ -121,12 +122,10 @@ export default function Maintenance() {
   };
 
   const handleInspect = async () => {
-    if (!form.repairCost) return;
     setSaving(true);
     try {
       const res = await API.patch(`/maintenance/${selected.id}/inspect`, {
         damageLevel: parseInt(form.damageLevel),
-        repairCost: parseFloat(form.repairCost),
         inspectionNotes: form.inspectionNotes
       });
       setSelected(res.data.data);
@@ -195,7 +194,7 @@ export default function Maintenance() {
               </div>
             ) : tasks.map(t => (
               <div key={t.id}
-                onClick={()=>{ setSelected(t); setForm({damageLevel:t.damageLevel||1,repairCost:t.repairCost||'',inspectionNotes:t.inspectionNotes||''}); setRepairNotes(''); }}
+                onClick={()=>{ setSelected(t); setForm({damageLevel:t.damageLevel||1,inspectionNotes:t.inspectionNotes||''}); setRepairNotes(''); }}
                 className="flex items-center gap-3 p-3 rounded-xl cursor-pointer mb-2 transition-all"
                 style={{
                   background:selected?.id===t.id?'rgba(56,189,248,0.05)':'rgba(255,255,255,0.02)',
@@ -222,29 +221,20 @@ export default function Maintenance() {
               <p className="text-xs mb-4" style={{color:'var(--text-dim)'}}>
                 Asset: <strong style={{color:'var(--text-main)'}}>{selected.resource?.name}</strong>
               </p>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label className="text-[0.65rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Damage Level</label>
-                  <select className="input-glass" value={form.damageLevel} onChange={e=>setForm(f=>({...f,damageLevel:e.target.value}))}>
-                    <option value="1">Level 1 — Minor / Cosmetic</option>
-                    <option value="2">Level 2 — Functional Impairment</option>
-                    <option value="3">Level 3 — Terminal Failure</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[0.65rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Est. Repair Cost ($)</label>
-                  <div className="relative">
-                    <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{color:'var(--text-dim)'}}/>
-                    <input type="number" className="input-glass pl-8" value={form.repairCost} onChange={e=>setForm(f=>({...f,repairCost:e.target.value}))} placeholder="0.00"/>
-                  </div>
-                </div>
+              <div className="mb-3">
+                <label className="text-[0.65rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Damage Level</label>
+                <select className="input-glass" value={form.damageLevel} onChange={e=>setForm(f=>({...f,damageLevel:e.target.value}))}>
+                  <option value="1">Level 1 — Minor / Cosmetic (15% of market price)</option>
+                  <option value="2">Level 2 — Functional Impairment (35% of market price)</option>
+                  <option value="3">Level 3 — Terminal Failure (65% of market price)</option>
+                </select>
               </div>
               <div className="mb-4">
                 <label className="text-[0.65rem] font-bold uppercase block mb-1" style={{color:'var(--text-dim)'}}>Inspection Notes</label>
                 <textarea className="input-glass" rows="3" value={form.inspectionNotes} onChange={e=>setForm(f=>({...f,inspectionNotes:e.target.value}))}
                   placeholder="Detail issues, part availability, structural concerns..."/>
               </div>
-              <button onClick={handleInspect} disabled={saving||!form.repairCost} className="btn-primary w-full justify-center py-3">
+              <button onClick={handleInspect} disabled={saving} className="btn-primary w-full justify-center py-3">
                 {saving ? <><RefreshCw size={16} className="spin"/> Running AI Analysis...</> : <><Brain size={16}/> Submit & Run AI Analysis</>}
               </button>
             </div>
@@ -340,7 +330,7 @@ export default function Maintenance() {
       </div>
 
       {/* ── Assign Technician Modal ── */}
-      {assignModal && (
+      {assignModal && createPortal(
         <div className="modal-overlay">
           <div className="glass-card modal-card animate-in">
             <div className="flex justify-between items-center mb-5">
@@ -372,11 +362,12 @@ export default function Maintenance() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Finalize Decision Modal ── */}
-      {finalModal && (
+      {finalModal && createPortal(
         <div className="modal-overlay">
           <div className="glass-card modal-card animate-in" style={{borderTopColor:'var(--accent-emerald)'}}>
             <div className="flex justify-between items-center mb-4">
@@ -411,7 +402,8 @@ export default function Maintenance() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

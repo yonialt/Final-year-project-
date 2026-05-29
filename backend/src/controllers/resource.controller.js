@@ -2,7 +2,7 @@ const resourceService = require('../services/resource.service');
 
 const getAllResources = async (req, res, next) => {
   try {
-    const resources = await resourceService.getAllResources();
+    const resources = await resourceService.getAllResources(req.user);
     res.json({ data: resources });
   } catch (err) {
     next(err);
@@ -11,7 +11,7 @@ const getAllResources = async (req, res, next) => {
 
 const getResourceById = async (req, res, next) => {
   try {
-    const resource = await resourceService.getResourceById(req.params.id);
+    const resource = await resourceService.getResourceById(req.params.id, req.user);
     if (!resource) return res.status(404).json({ message: 'Resource not found' });
     res.json({ data: resource });
   } catch (err) {

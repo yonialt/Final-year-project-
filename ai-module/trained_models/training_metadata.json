@@ -1,0 +1,20 @@
+{
+  "train_date": "2026-05-28T00:14:06.073856+00:00",
+  "n_samples": 1500,
+  "accuracy": 0.84,
+  "f1": 0.8395,
+  "feature_names": [
+    "damage_score",
+    "damage_type_encoded",
+    "asset_age_years",
+    "usage_count",
+    "estimated_repair_cost_etb",
+    "current_market_price_etb",
+    "repair_cost_ratio",
+    "age_damage_product",
+    "remaining_life_score",
+    "price_delta_pct",
+    "category_encoded"
+  ],
+  "model_version": "1.0.0"
+}

@@ -2,7 +2,32 @@ const prisma = require('../config/prisma');
 const pricingService = require('./pricing.service');
 const notificationService = require('./notification.service');
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:5000';
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
+const CATEGORY_LIFESPAN = {
+  'Desktop Computer': 6,
+  'Laptop': 5,
+  'Projector': 8,
+  'Laboratory Equipment': 10,
+  'Printer / Copier': 5,
+  'Furniture': 12,
+  'Network Equipment': 7,
+  'Audio/Visual Equipment': 7
+};
+
+const mapResourceToCategory = (resource) => {
+  const type = (resource.type || '').toUpperCase();
+  const name = (resource.name || '').toLowerCase();
+  if (type === 'FURNITURE' || name.includes('chair') || name.includes('desk')) return 'Furniture';
+  if (name.includes('projector') || name.includes('epson')) return 'Projector';
+  if (name.includes('laptop') || name.includes('elitebook') || name.includes('thinkpad')) return 'Laptop';
+  if (type === 'LAB_EQUIPMENT') return 'Laboratory Equipment';
+  if (type === 'PRINTING') return 'Printer / Copier';
+  if (type === 'NETWORKING') return 'Network Equipment';
+  if (name.includes('tv') || name.includes('speaker') || name.includes('camera')) return 'Audio/Visual Equipment';
+  if (type === 'ELECTRONICS') return 'Desktop Computer';
+  return 'Desktop Computer';
+};
 
 const INCLUDE = {
   resource: true,
@@ -66,7 +91,7 @@ const assignTechnician = async (damageReportId, technicianId) => {
 };
 
 // ── Submit inspection data (TECHNICIAN) ─────────────────────────────────────
-const submitInspection = async (id, { damageLevel, repairCost, inspectionNotes }) => {
+const submitInspection = async (id, { damageLevel, inspectionNotes }) => {
   const maintenance = await prisma.maintenance.findUnique({
     where: { id },
     include: { resource: true, damageReport: true }
@@ -77,27 +102,62 @@ const submitInspection = async (id, { damageLevel, repairCost, inspectionNotes }
   const purchaseYear = new Date(maintenance.resource.purchaseDate).getFullYear();
   const age = new Date().getFullYear() - purchaseYear;
 
-  // Fetch market price from e-commerce API mock
-  const { newPrice } = await pricingService.getMarketPrice(maintenance.resource.type);
+  const assetCategory = mapResourceToCategory(maintenance.resource);
+  const expectedLifespan = CATEGORY_LIFESPAN[assetCategory] || 8;
+  const usageCount = await prisma.request.count({
+    where: { resourceId: maintenance.resourceId, status: 'COMPLETED' }
+  });
 
-  // ── Call Python AI Microservice ────────────────────────────────────────
+  // Get current market price from simulated e-commerce API (pricing service)
+  const pricing = await pricingService.getMarketPrice(maintenance.resource.type);
+  const newPrice = pricing.newPrice;
+
+  // Calculate repair cost based on damage level: Level 1 (15%), Level 2 (35%), Level 3 (65%)
+  let multiplier = 0.15;
+  if (Number(damageLevel) === 2) {
+    multiplier = 0.35;
+  } else if (Number(damageLevel) === 3) {
+    multiplier = 0.65;
+  }
+  const calculatedRepairCost = parseFloat((newPrice * multiplier).toFixed(2));
+
+  // ── Call SRMS AI module (FastAPI) ──────────────────────────────────────
   let aiResult;
   try {
-    const response = await fetch(`${AI_SERVICE_URL}/ai/recommend`, {
+    const response = await fetch(`${AI_SERVICE_URL}/api/v1/asset/decision`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        damage_level: Number(damageLevel),
-        repair_cost: Number(repairCost),
-        new_price: newPrice,
-        asset_age: age
+        asset_id: maintenance.resourceId.split('').reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) >>> 0, 0) || 1,
+        asset_name: maintenance.resource.name,
+        asset_category: assetCategory,
+        damage_score: Number(damageLevel) / 3,
+        damage_type: 'physical',
+        asset_age_years: age,
+        expected_lifespan_years: expectedLifespan,
+        usage_count: usageCount,
+        estimated_repair_cost: calculatedRepairCost,
+        technician_notes: inspectionNotes || '',
+        reported_by_user_id: 1
       })
     });
-    aiResult = await response.json();
+    if (!response.ok) throw new Error(`AI service returned ${response.status}`);
+    const body = await response.json();
+    aiResult = {
+      decision: body.decision.toUpperCase(),
+      confidence: body.confidence,
+      cost_ratio: calculatedRepairCost / (newPrice || 1),
+      method: 'random_forest',
+      explanation: body.explanation,
+      metrics: {
+        repair_probability: body.repair_probability,
+        replace_probability: body.replace_probability,
+        triggered_rule: body.triggered_rule
+      }
+    };
   } catch (err) {
-    console.warn('[AI Service] Python service unavailable, using fallback:', err.message);
-    // Fallback to inline heuristic
-    aiResult = fallbackAI(Number(damageLevel), Number(repairCost), newPrice, age);
+    console.warn('[AI Service] FastAPI module unavailable, using fallback:', err.message);
+    aiResult = fallbackAI(Number(damageLevel), calculatedRepairCost, newPrice, age);
   }
 
   // Save AI recommendation record
@@ -110,9 +170,11 @@ const submitInspection = async (id, { damageLevel, repairCost, inspectionNotes }
       method: aiResult.method || 'heuristic_fallback',
       inputData: {
         damage_level: Number(damageLevel),
-        repair_cost: Number(repairCost),
+        repair_cost: calculatedRepairCost,
         new_price: newPrice,
-        asset_age: age
+        asset_age: age,
+        asset_category: assetCategory,
+        explanation: aiResult.explanation || null
       },
       metrics: aiResult.metrics || {}
     }
@@ -123,7 +185,7 @@ const submitInspection = async (id, { damageLevel, repairCost, inspectionNotes }
     where: { id },
     data: {
       damageLevel: Number(damageLevel),
-      repairCost: Number(repairCost),
+      repairCost: calculatedRepairCost,
       inspectionNotes,
       inspectedAt: new Date(),
       newPrice,
@@ -176,10 +238,10 @@ const finalizeDecision = async (id, finalDecision, officerNotes) => {
   });
 
   if (finalDecision === 'REPLACE') {
-    // Mark old resource as DISPOSED
+    // Mark old resource as unassigned
     await prisma.resource.update({
       where: { id: maintenance.resourceId },
-      data: { status: 'DISPOSED' }
+      data: { userId: null }
     });
 
     // Notify the reporter
@@ -212,12 +274,6 @@ const completeRepair = async (id, repairNotes) => {
       status: 'COMPLETED'
     },
     include: INCLUDE
-  });
-
-  // Mark resource as AVAILABLE again
-  await prisma.resource.update({
-    where: { id: maintenance.resourceId },
-    data: { status: 'AVAILABLE' }
   });
 
   // Update damage report

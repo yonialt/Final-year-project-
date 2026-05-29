@@ -14,16 +14,41 @@ const validate = (req, res, next) => {
   next();
 };
 
+// ─── Custom Validators ────────────────────────────────────────────────────────
+
+const isFullName = (value) => {
+  const parts = value.trim().split(/\s+/);
+  if (parts.length < 2) {
+    throw new Error('Full name must contain both first and last name');
+  }
+  if (!/^[a-zA-Z.\s-]+$/.test(value)) {
+    throw new Error('Full name can only contain letters, spaces, dots, and hyphens');
+  }
+  return true;
+};
+
+const isUniversityEmail = (value) => {
+  if (!value.toLowerCase().endsWith('@uog.edu.et')) {
+    throw new Error('Email must be a university email (@uog.edu.et)');
+  }
+  return true;
+};
+
 // ─── Validation Chains ────────────────────────────────────────────────────────
 
 const registerRules = [
-  body('name').trim().notEmpty().withMessage('Name is required'),
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Name is required')
+    .custom(isFullName),
 
   body('email')
     .trim()
     .isEmail()
     .withMessage('Valid email is required')
-    .normalizeEmail(),
+    .normalizeEmail()
+    .custom(isUniversityEmail),
 
   body('password')
     .isLength({ min: 8 })
@@ -44,21 +69,22 @@ const loginRules = [
   body('password').notEmpty().withMessage('Password is required'),
 ];
 const adminCreateUserRules = [
-  body('name').trim().notEmpty().withMessage('Name is required'),
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Name is required')
+    .custom(isFullName),
 
   body('email')
     .trim()
     .isEmail()
     .withMessage('Valid email is required')
-    .normalizeEmail(),
+    .normalizeEmail()
+    .custom(isUniversityEmail),
 
   body('password')
-    .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters')
-    .matches(/[A-Z]/)
-    .withMessage('Password must contain at least one uppercase letter')
-    .matches(/[0-9]/)
-    .withMessage('Password must contain at least one number'),
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters'),
 
   body('role')
     .notEmpty()

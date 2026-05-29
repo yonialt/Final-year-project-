@@ -32,8 +32,9 @@ const createUser = async ({ name, email, password, role, department }) => {
 };
 
 
-const getAllUsers = async () => {
+const getAllUsers = async (query = {}) => {
   return await prisma.user.findMany({
+    where: query,
     select: { id: true, name: true, email: true, role: true, department: true, createdAt: true },
     orderBy: { createdAt: 'desc' }
   });
@@ -61,9 +62,6 @@ const deleteUser = async (id) => {
 const getAnalyticsStats = async () => {
   const [
     totalResources,
-    availableResources,
-    damagedResources,
-    disposedResources,
     totalRequests,
     pendingRequests,
     completedRequests,
@@ -79,9 +77,6 @@ const getAnalyticsStats = async () => {
     totalAiRecommendations
   ] = await Promise.all([
     prisma.resource.count(),
-    prisma.resource.count({ where: { status: 'AVAILABLE' } }),
-    prisma.resource.count({ where: { status: 'DAMAGED' } }),
-    prisma.resource.count({ where: { status: 'DISPOSED' } }),
     prisma.request.count(),
     prisma.request.count({ where: { status: 'PENDING' } }),
     prisma.request.count({ where: { status: 'COMPLETED' } }),
@@ -96,6 +91,10 @@ const getAnalyticsStats = async () => {
     prisma.priceCatalog.findMany(),
     prisma.aIRecommendation.count()
   ]);
+
+  const availableResources = 0;
+  const damagedResources = 0;
+  const disposedResources = 0;
 
   // Avg repair cost
   const repairAgg = await prisma.maintenance.aggregate({
@@ -251,4 +250,121 @@ const getSystemStats = async () => {
   };
 };
 
-module.exports = { createUser, getAllUsers, getUserById, updateUser, deleteUser, getAnalyticsStats, getSystemStats };
+const bulkCreateUsers = async (usersList, creator = { role: 'ADMIN' }) => {
+  if (!Array.isArray(usersList) || usersList.length === 0) {
+    const err = new Error('No user data provided');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 1. Gather all emails to check for duplicates in the DB
+  const emails = usersList.map(u => (u.email || '').trim().toLowerCase()).filter(Boolean);
+  const uniqueEmails = [...new Set(emails)];
+  if (uniqueEmails.length !== usersList.length) {
+    const err = new Error('The uploaded list contains duplicate emails');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 2. Fetch existing users with these emails
+  const existingUsers = await prisma.user.findMany({
+    where: { email: { in: uniqueEmails } },
+    select: { email: true }
+  });
+  if (existingUsers.length > 0) {
+    const existingEmails = existingUsers.map(u => u.email);
+    const err = new Error(`The following emails are already in use: ${existingEmails.join(', ')}`);
+    err.statusCode = 409;
+    throw err;
+  }
+
+  // 3. Validate name and email formats
+  const errors = [];
+  usersList.forEach((u, index) => {
+    // Validate Name
+    const nameTrimmed = (u.name || '').trim();
+    if (!nameTrimmed) {
+      errors.push(`Row ${index + 1}: Name is required`);
+    } else {
+      const parts = nameTrimmed.split(/\s+/);
+      if (parts.length < 2) {
+        errors.push(`Row ${index + 1} (${nameTrimmed}): Full name must contain both first and last name`);
+      }
+      if (!/^[a-zA-Z.\s-]+$/.test(nameTrimmed)) {
+        errors.push(`Row ${index + 1} (${nameTrimmed}): Name can only contain letters, spaces, dots, and hyphens`);
+      }
+    }
+
+    // Validate Email
+    const emailTrimmed = (u.email || '').trim();
+    if (!emailTrimmed) {
+      errors.push(`Row ${index + 1}: Email is required`);
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      errors.push(`Row ${index + 1} (${emailTrimmed}): Invalid email format`);
+    } else if (!emailTrimmed.toLowerCase().endsWith('@uog.edu.et')) {
+      errors.push(`Row ${index + 1} (${emailTrimmed}): Email must be a university email (@uog.edu.et)`);
+    }
+
+    // Validate Role & Creator restrictions
+    const role = (u.role || '').toUpperCase();
+    const validRoles = ['STAFF', 'DEPARTMENT_HEAD', 'ACADEMIC_DEAN', 'RESOURCE_OFFICER', 'TECHNICIAN', 'ADMIN'];
+    if (role && !validRoles.includes(role)) {
+      errors.push(`Row ${index + 1}: Invalid role '${role}'`);
+    }
+
+    if (creator.role === 'ADMIN') {
+      if (role === 'STAFF') {
+        errors.push(`Row ${index + 1}: System Admin cannot register Staff members. Staff must be registered by their respective Department Head.`);
+      }
+    } else if (creator.role === 'DEPARTMENT_HEAD') {
+      if (role && role !== 'STAFF') {
+        errors.push(`Row ${index + 1}: Department Heads can only register Staff members.`);
+      }
+    }
+  });
+
+  if (errors.length > 0) {
+    const err = new Error(errors.join(' | '));
+    err.statusCode = 422;
+    throw err;
+  }
+
+  // 4. Hash passwords concurrently and prepare creations
+  const createdUsersInfo = [];
+  const operations = await Promise.all(
+    usersList.map(async (u) => {
+      const firstWord = u.name.trim().split(/\s+/)[0] || 'User';
+      const tempPassword = `${firstWord}1234`;
+      const hashed = await bcrypt.hash(tempPassword, SALT_ROUNDS);
+
+      const resolvedRole = creator.role === 'DEPARTMENT_HEAD' ? 'STAFF' : (u.role || 'STAFF');
+      const resolvedDept = creator.role === 'DEPARTMENT_HEAD' ? creator.department : (u.department || null);
+
+      createdUsersInfo.push({
+        name: u.name,
+        email: u.email,
+        role: resolvedRole,
+        department: resolvedDept,
+        tempPassword
+      });
+
+      return prisma.user.create({
+        data: {
+          name: u.name,
+          email: u.email,
+          password: hashed,
+          role: resolvedRole,
+          department: resolvedDept,
+          mustChangePassword: true
+        }
+      });
+    })
+  );
+
+  // 5. Run atomically in a transaction
+  await prisma.$transaction(operations);
+
+  return createdUsersInfo;
+};
+
+module.exports = { createUser, getAllUsers, getUserById, updateUser, deleteUser, getAnalyticsStats, getSystemStats, bulkCreateUsers };

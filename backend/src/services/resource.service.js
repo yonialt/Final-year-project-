@@ -4,17 +4,86 @@ const prisma = require('../config/prisma');
  * Resource Management Service
  */
 
-const getAllResources = async () => {
+/**
+ * Abstract the scoping / filtering logic for Resources based on the user's role.
+ * 
+ * Rules:
+ * 1. STAFF: Sees only their own assigned assets (userId === user.id).
+ * 2. DEPARTMENT_HEAD: Sees their own assets + staff assets within their department + direct department-assigned assets.
+ * 3. ACADEMIC_DEAN: Sees their own assets + head/staff assets within their department + direct department-assigned assets.
+ * 4. ADMIN, RESOURCE_OFFICER, TECHNICIAN: Sees all resources.
+ */
+const getResourceScopeFilter = (user) => {
+  if (!user) return {};
+
+  const role = user.role;
+  const userId = user.id;
+  const dept = user.department;
+
+  if (['ADMIN', 'RESOURCE_OFFICER', 'TECHNICIAN'].includes(role)) {
+    return {}; // No filter, see all resources
+  }
+
+  if (role === 'STAFF') {
+    return { userId };
+  }
+
+  if (role === 'DEPARTMENT_HEAD') {
+    return {
+      OR: [
+        { userId },
+        {
+          user: {
+            role: 'STAFF',
+            department: dept
+          }
+        },
+        {
+          userId: null,
+          ownerDepartment: dept
+        }
+      ]
+    };
+  }
+
+  if (role === 'ACADEMIC_DEAN') {
+    return {
+      OR: [
+        { userId },
+        {
+          user: {
+            role: { in: ['STAFF', 'DEPARTMENT_HEAD'] },
+            department: dept
+          }
+        },
+        {
+          userId: null,
+          ownerDepartment: dept
+        }
+      ]
+    };
+  }
+
+  return { userId };
+};
+
+const getAllResources = async (user) => {
+  const filter = getResourceScopeFilter(user);
   return await prisma.resource.findMany({
+    where: filter,
     orderBy: { updatedAt: 'desc' },
-    include: { maintenances: true, requests: true }
+    include: { maintenances: true, requests: true, user: { select: { id: true, name: true, role: true, department: true } } }
   });
 };
 
-const getResourceById = async (id) => {
-  return await prisma.resource.findUnique({
-    where: { id },
-    include: { maintenances: true, requests: true }
+const getResourceById = async (id, user) => {
+  const filter = getResourceScopeFilter(user);
+  return await prisma.resource.findFirst({
+    where: {
+      id,
+      ...filter
+    },
+    include: { maintenances: true, requests: true, user: { select: { id: true, name: true, role: true, department: true } } }
   });
 };
 
@@ -43,10 +112,10 @@ const replaceResource = async (oldResourceId, newData) => {
   if (!oldResource) throw new Error('Resource not found');
 
   return await prisma.$transaction(async (tx) => {
-    // 1. Dispose old
+    // 1. Unassign old
     await tx.resource.update({
       where: { id: oldResourceId },
-      data: { status: 'DISPOSED' }
+      data: { userId: null }
     });
 
     // 2. Create new
@@ -57,8 +126,7 @@ const replaceResource = async (oldResourceId, newData) => {
         location: newData.location || oldResource.location,
         ownerDepartment: newData.ownerDepartment || oldResource.ownerDepartment,
         purchaseDate: new Date(),
-        purchasePrice: newData.purchasePrice || oldResource.purchasePrice,
-        status: 'AVAILABLE'
+        purchasePrice: newData.purchasePrice || oldResource.purchasePrice
       }
     });
   });

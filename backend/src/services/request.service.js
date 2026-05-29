@@ -11,8 +11,18 @@ const INCLUDE = {
   resource: true
 };
 
-// ── Create request (STAFF) ──────────────────────────────────────────────────
+// ── Create request (STAFF, DEPARTMENT_HEAD, ACADEMIC_DEAN) ──────────────────
 const createRequest = async (userId, data) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('User not found');
+
+  let initialStatus = 'PENDING';
+  if (user.role === 'DEPARTMENT_HEAD') {
+    initialStatus = 'APPROVED_BY_HEAD';
+  } else if (user.role === 'ACADEMIC_DEAN') {
+    initialStatus = 'APPROVED_BY_DEAN';
+  }
+
   const request = await prisma.request.create({
     data: {
       userId,
@@ -23,23 +33,44 @@ const createRequest = async (userId, data) => {
       urgency: data.urgency || 'MEDIUM',
       reason: data.reason,
       resourceId: data.resourceId || null,
-      status: 'PENDING'
+      status: initialStatus
     },
     include: INCLUDE
   });
 
-  // Notify department heads
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  const deptHeads = await prisma.user.findMany({
-    where: { role: 'DEPARTMENT_HEAD', department: user.department }
-  });
-  for (const head of deptHeads) {
-    await notificationService.create(head.id, {
-      title: 'New Resource Request',
-      message: `${user.name} submitted a new resource request: ${data.resourceName || data.description}`,
-      type: 'ACTION',
-      link: '/requests'
+  // Notify next role in hierarchy based on start status
+  if (initialStatus === 'PENDING') {
+    const deptHeads = await prisma.user.findMany({
+      where: { role: 'DEPARTMENT_HEAD', department: user.department }
     });
+    for (const head of deptHeads) {
+      await notificationService.create(head.id, {
+        title: 'New Resource Request',
+        message: `${user.name} submitted a new resource request: ${data.resourceName || data.description}`,
+        type: 'ACTION',
+        link: '/requests'
+      });
+    }
+  } else if (initialStatus === 'APPROVED_BY_HEAD') {
+    const deans = await prisma.user.findMany({ where: { role: 'ACADEMIC_DEAN' } });
+    for (const dean of deans) {
+      await notificationService.create(dean.id, {
+        title: 'Request Awaiting Your Approval',
+        message: `A new resource request from Department Head ${user.name} was submitted`,
+        type: 'ACTION',
+        link: '/requests'
+      });
+    }
+  } else if (initialStatus === 'APPROVED_BY_DEAN') {
+    const officers = await prisma.user.findMany({ where: { role: 'RESOURCE_OFFICER' } });
+    for (const officer of officers) {
+      await notificationService.create(officer.id, {
+        title: 'Request Approved by Dean',
+        message: `Resource request from Dean ${user.name} is approved for procurement`,
+        type: 'ACTION',
+        link: '/requests'
+      });
+    }
   }
 
   return request;
@@ -79,7 +110,7 @@ const getRequestsByRole = async (user) => {
 };
 
 // ── Update request status ───────────────────────────────────────────────────
-const updateRequestStatus = async (id, status, role, rejectionReason) => {
+const updateRequestStatus = async (id, status, role, rejectionReason, rejectingUser) => {
   const request = await prisma.request.findUnique({
     where: { id },
     include: { user: true }
@@ -111,11 +142,42 @@ const updateRequestStatus = async (id, status, role, rejectionReason) => {
     throw new Error(`Invalid status transition: ${request.status} → ${status} for role ${role}`);
   }
 
+  let resourceId = request.resourceId;
+
+  // Auto-create and assign Resource when request moves to PROCURED or COMPLETED
+  if ((status === 'PROCURED' || status === 'COMPLETED') && request.type === 'NEW_RESOURCE' && !request.resourceId) {
+    let price = 1000;
+    if (request.resourceType) {
+      const catalogEntry = await prisma.priceCatalog.findUnique({
+        where: { resourceType: request.resourceType }
+      });
+      if (catalogEntry) {
+        price = catalogEntry.newPrice || catalogEntry.repairCost || 1000;
+      }
+    }
+
+    const newResource = await prisma.resource.create({
+      data: {
+        name: request.resourceName || 'Requested Resource',
+        type: request.resourceType || 'ELECTRONICS',
+        location: request.user.department ? `${request.user.department} Office` : 'Main Campus',
+        ownerDepartment: request.user.department || null,
+        purchaseDate: new Date(),
+        purchasePrice: price,
+        userId: request.userId // Automatically assign to the requester user (staff, head, dean)
+      }
+    });
+
+    resourceId = newResource.id;
+  }
+
   const updated = await prisma.request.update({
     where: { id },
     data: {
       status,
-      rejectionReason: status === 'REJECTED' ? rejectionReason : undefined
+      rejectionReason: status === 'REJECTED' ? rejectionReason : undefined,
+      rejectedBy: status === 'REJECTED' && rejectingUser ? `${rejectingUser.name} (${rejectingUser.role.replace(/_/g, ' ')})` : undefined,
+      resourceId: resourceId
     },
     include: INCLUDE
   });

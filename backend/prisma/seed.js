@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  const password = await bcrypt.hash('Admin@1234', 10);
+  const password = await bcrypt.hash('changeme', 10);
 
   // ─── Users ──────────────────────────────────────────────────────────────────
   const users = [
@@ -26,22 +26,22 @@ async function main() {
       create: u,
     });
   }
-  console.log('✅ Users seeded (10 accounts, password: Admin@1234)');
+  console.log('✅ Users seeded (10 accounts, password: changeme)');
 
   // ─── Resources ──────────────────────────────────────────────────────────────
   const resources = [
-    { name:'Dell XPS 15 Laptop',        type:'ELECTRONICS',   location:'Computer Lab 101',      purchaseDate:new Date('2023-01-15'), purchasePrice:1500, status:'AVAILABLE' },
-    { name:'Herman Miller Aeron Chair', type:'FURNITURE',     location:'Office 202, CS Dept',   purchaseDate:new Date('2022-05-20'), purchasePrice:800,  status:'IN_USE' },
-    { name:'Epson 4K Projector EB-2265U',type:'ELECTRONICS',  location:'Conference Room A',     purchaseDate:new Date('2021-11-10'), purchasePrice:2000, status:'DAMAGED' },
-    { name:'Canon i-SENSYS MF645Cx',    type:'PRINTING',      location:'Admin Block 1F',        purchaseDate:new Date('2022-08-01'), purchasePrice:600,  status:'AVAILABLE' },
-    { name:'Cisco Catalyst 2960X',      type:'NETWORKING',    location:'Server Room B2',        purchaseDate:new Date('2020-03-15'), purchasePrice:900,  status:'IN_USE' },
-    { name:'Tektronix TDS 2024C',       type:'LAB_EQUIPMENT', location:'Physics Lab 3',         purchaseDate:new Date('2019-06-12'), purchasePrice:3500, status:'AVAILABLE' },
-    { name:'FlexiSpot E7 Standing Desk',type:'FURNITURE',     location:'Staff Lounge',          purchaseDate:new Date('2023-07-22'), purchasePrice:1200, status:'AVAILABLE' },
-    { name:'HP ProBook 450 G8',         type:'ELECTRONICS',   location:'Library Computer Lab',  purchaseDate:new Date('2018-09-01'), purchasePrice:1100, status:'DAMAGED' },
-    { name:'Brother HL-L2375DW',        type:'PRINTING',      location:'Engineering Dept 3F',   purchaseDate:new Date('2021-03-10'), purchasePrice:350,  status:'AVAILABLE' },
-    { name:'Keysight 34461A DMM',       type:'LAB_EQUIPMENT', location:'Electronics Lab 2',     purchaseDate:new Date('2020-01-20'), purchasePrice:4200, status:'IN_USE' },
-    { name:'Lenovo ThinkPad X1 Carbon', type:'ELECTRONICS',   location:'Dean Office',           purchaseDate:new Date('2022-02-14'), purchasePrice:1800, status:'IN_USE' },
-    { name:'TP-Link TL-SG1024',         type:'NETWORKING',    location:'Network Closet 1F',     purchaseDate:new Date('2021-08-05'), purchasePrice:450,  status:'AVAILABLE' },
+    { name:'Dell XPS 15 Laptop',        type:'ELECTRONICS',   location:'Computer Lab 101',      purchaseDate:new Date('2023-01-15'), purchasePrice:1500 },
+    { name:'Herman Miller Aeron Chair', type:'FURNITURE',     location:'Office 202, CS Dept',   purchaseDate:new Date('2022-05-20'), purchasePrice:800 },
+    { name:'Epson 4K Projector EB-2265U',type:'ELECTRONICS',  location:'Conference Room A',     purchaseDate:new Date('2021-11-10'), purchasePrice:2000 },
+    { name:'Canon i-SENSYS MF645Cx',    type:'PRINTING',      location:'Admin Block 1F',        purchaseDate:new Date('2022-08-01'), purchasePrice:600 },
+    { name:'Cisco Catalyst 2960X',      type:'NETWORKING',    location:'Server Room B2',        purchaseDate:new Date('2020-03-15'), purchasePrice:900 },
+    { name:'Tektronix TDS 2024C',       type:'LAB_EQUIPMENT', location:'Physics Lab 3',         purchaseDate:new Date('2019-06-12'), purchasePrice:3500 },
+    { name:'FlexiSpot E7 Standing Desk',type:'FURNITURE',     location:'Staff Lounge',          purchaseDate:new Date('2023-07-22'), purchasePrice:1200 },
+    { name:'HP ProBook 450 G8',         type:'ELECTRONICS',   location:'Library Computer Lab',  purchaseDate:new Date('2018-09-01'), purchasePrice:1100 },
+    { name:'Brother HL-L2375DW',        type:'PRINTING',      location:'Engineering Dept 3F',   purchaseDate:new Date('2021-03-10'), purchasePrice:350 },
+    { name:'Keysight 34461A DMM',       type:'LAB_EQUIPMENT', location:'Electronics Lab 2',     purchaseDate:new Date('2020-01-20'), purchasePrice:4200 },
+    { name:'Lenovo ThinkPad X1 Carbon', type:'ELECTRONICS',   location:'Dean Office',           purchaseDate:new Date('2022-02-14'), purchasePrice:1800 },
+    { name:'TP-Link TL-SG1024',         type:'NETWORKING',    location:'Network Closet 1F',     purchaseDate:new Date('2021-08-05'), purchasePrice:450 },
   ];
 
   const existingCount = await prisma.resource.count();
@@ -139,7 +139,7 @@ async function main() {
   }
 
   console.log('\n' + '═'.repeat(60));
-  console.log('📋 Login credentials (all use password: Admin@1234)');
+  console.log('📋 Login credentials (all use password: changeme)');
   console.log('═'.repeat(60));
   console.log('   admin@uog.edu.et       → ADMIN');
   console.log('   dean@uog.edu.et        → ACADEMIC_DEAN');

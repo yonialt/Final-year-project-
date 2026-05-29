@@ -36,4 +36,12 @@ const updateStatus = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getReports, getReport, createReport, forwardToOfficer, updateStatus };
+const rejectReport = async (req, res, next) => {
+  try {
+    const { rejectionReason } = req.body;
+    const report = await damageReportService.rejectDamageReport(req.params.id, req.user, rejectionReason);
+    res.json({ data: report });
+  } catch (err) { next(err); }
+};
+
+module.exports = { getReports, getReport, createReport, forwardToOfficer, updateStatus, rejectReport };

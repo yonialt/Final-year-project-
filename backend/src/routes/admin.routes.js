@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { createUser, getUsers, getUser, updateUser, deleteUser, getAnalytics, getSystemStats } = require('../controllers/admin.controller');
+const { createUser, getUsers, getUser, updateUser, deleteUser, getAnalytics, getSystemStats, bulkCreateUsers } = require('../controllers/admin.controller');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 const { validate, adminCreateUserRules } = require('../middleware/validate.middleware');
 
@@ -13,11 +13,12 @@ router.get('/analytics', authenticate, authorize('ADMIN', 'ACADEMIC_DEAN', 'RESO
 router.get('/system-stats', authenticate, authorize('ADMIN'), getSystemStats);
 
 
-// User management — ADMIN and RESOURCE_OFFICER (read only for officer)
-router.post('/users', authenticate, authorize('ADMIN'), adminCreateUserRules, validate, createUser);
-router.get('/users', authenticate, authorize('ADMIN', 'RESOURCE_OFFICER'), getUsers);
-router.get('/users/:id', authenticate, authorize('ADMIN', 'RESOURCE_OFFICER'), getUser);
-router.patch('/users/:id', authenticate, authorize('ADMIN'), updateUser);
-router.delete('/users/:id', authenticate, authorize('ADMIN'), deleteUser);
+// User management — ADMIN and DEPARTMENT_HEAD (management), RESOURCE_OFFICER (read-only)
+router.post('/users/bulk', authenticate, authorize('ADMIN', 'DEPARTMENT_HEAD'), bulkCreateUsers);
+router.post('/users', authenticate, authorize('ADMIN', 'DEPARTMENT_HEAD'), adminCreateUserRules, validate, createUser);
+router.get('/users', authenticate, authorize('ADMIN', 'RESOURCE_OFFICER', 'DEPARTMENT_HEAD'), getUsers);
+router.get('/users/:id', authenticate, authorize('ADMIN', 'RESOURCE_OFFICER', 'DEPARTMENT_HEAD'), getUser);
+router.patch('/users/:id', authenticate, authorize('ADMIN', 'DEPARTMENT_HEAD'), updateUser);
+router.delete('/users/:id', authenticate, authorize('ADMIN', 'DEPARTMENT_HEAD'), deleteUser);
 
 module.exports = router;

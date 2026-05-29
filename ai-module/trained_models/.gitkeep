@@ -1,0 +1,2 @@
+# This directory is auto-populated when you run the training script.
+# trained artifacts: asset_decision_rf.pkl, scaler.pkl, label encoders, training_metadata.json

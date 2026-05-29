@@ -1,0 +1,32 @@
+{
+  "total_rows": 1500,
+  "repair_count": 869,
+  "repair_percentage": 57.93,
+  "replace_count": 631,
+  "replace_percentage": 42.07,
+  "rows_per_category": {
+    "Desktop Computer": 188,
+    "Laptop": 188,
+    "Projector": 188,
+    "Laboratory Equipment": 188,
+    "Printer / Copier": 187,
+    "Furniture": 187,
+    "Network Equipment": 187,
+    "Audio/Visual Equipment": 187
+  },
+  "damage_score": {
+    "min": 0.0504,
+    "max": 0.9789,
+    "mean": 0.5143
+  },
+  "repair_cost_ratio": {
+    "min": 0.022751,
+    "max": 1.206152,
+    "mean": 0.2405
+  },
+  "current_market_price_etb": {
+    "min": 3023.68,
+    "max": 295909.55,
+    "mean": 62003.53
+  }
+}

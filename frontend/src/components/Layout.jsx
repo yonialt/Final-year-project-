@@ -10,13 +10,13 @@ import SidebarToggle from './Layout/SidebarToggle';
 
 const NAV = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['ALL'] },
-  { name: 'Asset Fleet', path: '/resources', icon: Database, roles: ['STAFF', 'DEPARTMENT_HEAD', 'ACADEMIC_DEAN', 'RESOURCE_OFFICER', 'TECHNICIAN'] },
+  { name: 'Asset Fleet', path: '/resources', icon: Database, roles: ['STAFF', 'DEPARTMENT_HEAD', 'ACADEMIC_DEAN', 'RESOURCE_OFFICER'] },
   { name: 'New Requests', path: '/requests', icon: ClipboardList, roles: ['STAFF', 'DEPARTMENT_HEAD', 'ACADEMIC_DEAN', 'RESOURCE_OFFICER', 'TECHNICIAN'] },
   { name: 'Damage Reports', path: '/damage-reports', icon: AlertTriangle, roles: ['STAFF', 'DEPARTMENT_HEAD', 'ACADEMIC_DEAN', 'RESOURCE_OFFICER', 'TECHNICIAN'] },
   { name: 'Maintenance', path: '/maintenance', icon: Activity, roles: ['RESOURCE_OFFICER', 'TECHNICIAN'] },
   { name: 'Analytics', path: '/analytics', icon: BarChart2, roles: ['RESOURCE_OFFICER', 'ACADEMIC_DEAN'] },
-  { name: 'Users', path: '/users', icon: Users, roles: ['ADMIN'] },
-  { name: 'Register User', path: '/users', icon: UserPlus, roles: ['ADMIN'] },
+  { name: 'Users', path: '/users', icon: Users, roles: ['ADMIN', 'DEPARTMENT_HEAD'] },
+  { name: 'Register User', path: '/users', icon: UserPlus, roles: ['ADMIN', 'DEPARTMENT_HEAD'] },
 ];
 
 const ROLE_LABEL = {

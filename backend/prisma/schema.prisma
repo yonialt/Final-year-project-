@@ -21,6 +21,7 @@ model User {
   maintenances  Maintenance[]  @relation("TechnicianMaintenances")
   notifications Notification[]
   requests      Request[]
+  resources     Resource[]
 
   @@map("users")
 }
@@ -33,7 +34,8 @@ model Resource {
   ownerDepartment String?
   purchaseDate    DateTime
   purchasePrice   Float
-  status          ResourceStatus @default(AVAILABLE)
+  userId          String?
+  user            User?          @relation(fields: [userId], references: [id])
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   damageReports   DamageReport[]
@@ -55,6 +57,7 @@ model Request {
   status          RequestStatus @default(PENDING)
   type            String
   rejectionReason String?
+  rejectedBy      String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   resource        Resource?     @relation(fields: [resourceId], references: [id])
@@ -70,6 +73,8 @@ model DamageReport {
   description      String
   location         String
   status           DamageReportStatus @default(PENDING)
+  rejectionReason  String?
+  rejectedBy       String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   aiRecommendation AIRecommendation?
@@ -157,12 +162,6 @@ enum Role {
   ADMIN
 }
 
-enum ResourceStatus {
-  AVAILABLE
-  IN_USE
-  DAMAGED
-  DISPOSED
-}
 
 enum RequestStatus {
   PENDING
@@ -184,6 +183,7 @@ enum DamageReportStatus {
   REPAIR_COMPLETED
   REPLACED
   CLOSED
+  REJECTED
 }
 
 enum Priority {

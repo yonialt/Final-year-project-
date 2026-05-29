@@ -51,13 +51,6 @@ export default function Analytics() {
     </div>
   );
 
-  const resourcePieData = [
-    { name: 'Available', value: data.resources.available },
-    { name: 'Damaged', value: data.resources.damaged },
-    { name: 'Disposed', value: data.resources.disposed },
-    { name: 'In Use', value: data.resources.total - data.resources.available - data.resources.damaged - data.resources.disposed },
-  ].filter(d => d.value > 0);
-
   const aiPieData = [
     { name: 'Repair', value: data.maintenance.repairDecisions },
     { name: 'Replace', value: data.maintenance.replaceDecisions },
@@ -73,7 +66,7 @@ export default function Analytics() {
 
       {/* KPI Cards */}
       <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))' }}>
-        <StatCard icon={Database} title="Total Assets" value={data.resources.total} sub={`${data.resources.damaged} damaged`} color="var(--accent-blue)" />
+        <StatCard icon={Database} title="Total Assets" value={data.resources.total} sub="Physical Assets" color="var(--accent-blue)" />
         <StatCard icon={ClipboardList} title="Total Requests" value={data.requests.total} sub={`${data.requests.pending} pending`} color="var(--accent-emerald)" />
         <StatCard icon={FileWarning} title="Damage Reports" value={data.damageReports?.total || 0} sub={`${data.damageReports?.pending || 0} pending`} color="var(--accent-rose)" />
         <StatCard icon={Brain} title="AI Decisions" value={data.maintenance.total} sub={`${Math.round((data.maintenance.avgConfidence || 0) * 100)}% avg conf.`} color="var(--accent-purple)" />
@@ -82,7 +75,7 @@ export default function Analytics() {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid gap-4 mb-4" style={{ gridTemplateColumns: '2fr 1fr' }}>
+      <div className="mb-4">
         <div className="glass-card">
           <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
             <TrendingUp size={16} style={{ color: 'var(--accent-blue)' }} />Request Activity (Last 7 Days)
@@ -104,28 +97,6 @@ export default function Analytics() {
                 <Area type="monotone" dataKey="damage" name="Damage" stroke="var(--accent-rose)" strokeWidth={2} fill="transparent" />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="glass-card">
-          <h3 className="font-bold text-sm mb-4">Asset Status Distribution</h3>
-          <div style={{ height: 180 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={resourcePieData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={3} dataKey="value">
-                  {resourcePieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip contentStyle={{ background: 'var(--bg-glass)', border: '1px solid var(--border-glass)', borderRadius: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {resourcePieData.map((d, i) => (
-              <div key={d.name} className="flex items-center gap-1.5 text-[0.7rem]">
-                <div className="w-2 h-2 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-                <span style={{ color: 'var(--text-dim)' }}>{d.name}: <strong style={{ color: 'var(--text-main)' }}>{d.value}</strong></span>
-              </div>
-            ))}
           </div>
         </div>
       </div>

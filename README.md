@@ -159,7 +159,7 @@ cd frontend && npm run dev
 
 ## 🔑 Demo Credentials
 
-All accounts use password: **`Admin@1234`**
+All accounts use password: **`changeme`**
 
 | Email | Role | Department |
 |-------|------|------------|
